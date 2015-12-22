@@ -1047,7 +1047,7 @@ public:
                 string receiverAddr = GetTxOutputAddr(tx, index);
                 index++;
                 // Only process with the member-only colors.
-                if (!plicense->IsMemberOnly(txout.color))
+                if (!plicense->IsMemberOnly(GetControlColor(txout.color)))
                     continue;
                 if (!plicense->IsColorOwner(txout.color, receiverAddr) && Activating.find(txout.color) == Activating.end()) {
                     if (!pactivate->IsColorExist(txout.color)) {
@@ -1126,11 +1126,12 @@ private:
             string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
 
+            if (color != GetControlColor(color))
+                continue;
             if (!plicense->IsMemberOnly(color))
                 continue;
-            if (plicense->IsColorOwner(color, senderAddr)) {
+            if (plicense->IsColorOwner(color, senderAddr))
                 ActivateColor.insert(color);
-            }
         }
 
         for (unsigned int i = 0; i < tx.vout.size(); i++) {
@@ -1138,7 +1139,6 @@ private:
                 continue;
             if (ActivateColor.find(tx.vout[i].color) == ActivateColor.end())
                 continue;
-
             string receiverAddr = GetTxOutputAddr(tx, i);
             pactivate->Activate(tx.vout[i].color, receiverAddr);
         }
@@ -1158,19 +1158,17 @@ private:
             string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
 
+            if (color != GetControlColor(color))
+                continue;
             if (!plicense->IsMemberOnly(color))
                 continue;
-            if (plicense->IsColorOwner(color, senderAddr)) {
+            if (plicense->IsColorOwner(color, senderAddr))
                 DeactivateColor.insert(color);
-            }
         }
 
         for (unsigned int i = 0; i < tx.vout.size(); i++) {
-            if (!plicense->IsMemberOnly(tx.vout[i].color))
-                continue;
             if (DeactivateColor.find(tx.vout[i].color) == DeactivateColor.end())
                 continue;
-
             string receiverAddr = GetTxOutputAddr(tx, i);
             pactivate->Deactivate(tx.vout[i].color, receiverAddr);
         }
