@@ -10,8 +10,6 @@
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 
-#include <boost/utility/binary.hpp>
-
 std::string COutPoint::ToString() const
 {
     return strprintf("COutPoint(%s, %u)", hash.ToString().substr(0,10), n);
@@ -152,22 +150,3 @@ std::string CTransaction::ToString() const
     return str;
 }
 
-// Compare the leading bits
-bool CompLeadBits(const int &nBits, const uint32_t &input, const uint32_t &target)
-{
-    return (!((input >> (32 - nBits)) ^ target));
-}
-
-type_Color GetControlColor(type_Color color)
-{
-    if (CompLeadBits(1, color, 0 ))         // 0
-        return (color >> 24) << 24;
-    else if (CompLeadBits(2, color, 2 ))    // 10
-        return (color >> 16) << 16;
-    else if (CompLeadBits(3, color, 6 ))    // 110
-        return (color >> 8) << 8;
-    else if (CompLeadBits(4, color, 14 ))   // 1110
-        return (color >> 4) << 4;
-    else                                    // 1111
-        return color;
-}

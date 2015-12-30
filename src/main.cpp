@@ -35,6 +35,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/thread.hpp>
+#include <boost/utility/binary.hpp>
 #include <vector>
 
 #include <boost/thread/tss.hpp>
@@ -1028,6 +1029,8 @@ public:
                 }
                 string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
                 type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+                if (color != GetControlColor(color))
+                    continue;
                 if (plicense->IsColorOwner(color, senderAddr)) {
                     Activating.insert(color);
                 }
@@ -1047,9 +1050,9 @@ public:
                 string receiverAddr = GetTxOutputAddr(tx, index);
                 index++;
                 // Only process with the member-only colors.
-                if (!plicense->IsMemberOnly(GetControlColor(txout.color)))
-                    continue;
-                if (!plicense->IsColorOwner(txout.color, receiverAddr) && Activating.find(txout.color) == Activating.end()) {
+                if (Activating.find(txout.color) == Activating.end() &&
+                    plicense->IsMemberOnly(GetControlColor(txout.color)) &&
+                    !plicense->IsColorOwner(txout.color, receiverAddr)) {
                     if (!pactivate->IsColorExist(txout.color)) {
                         string error_msg = strprintf(
                                 "no activate record for color %u", txout.color);
@@ -1130,8 +1133,9 @@ private:
                 continue;
             if (!plicense->IsMemberOnly(color))
                 continue;
-            if (plicense->IsColorOwner(color, senderAddr))
+            if (plicense->IsColorOwner(color, senderAddr)) {
                 ActivateColor.insert(color);
+            }
         }
 
         for (unsigned int i = 0; i < tx.vout.size(); i++) {
@@ -1139,6 +1143,7 @@ private:
                 continue;
             if (ActivateColor.find(tx.vout[i].color) == ActivateColor.end())
                 continue;
+
             string receiverAddr = GetTxOutputAddr(tx, i);
             pactivate->Activate(tx.vout[i].color, receiverAddr);
         }
@@ -1162,13 +1167,15 @@ private:
                 continue;
             if (!plicense->IsMemberOnly(color))
                 continue;
-            if (plicense->IsColorOwner(color, senderAddr))
+            if (plicense->IsColorOwner(color, senderAddr)) {
                 DeactivateColor.insert(color);
+            }
         }
 
         for (unsigned int i = 0; i < tx.vout.size(); i++) {
             if (DeactivateColor.find(tx.vout[i].color) == DeactivateColor.end())
                 continue;
+
             string receiverAddr = GetTxOutputAddr(tx, i);
             pactivate->Deactivate(tx.vout[i].color, receiverAddr);
         }
@@ -2332,7 +2339,26 @@ bool IsValidColor(const type_Color &color) {
     }
 }
 
-// Use to initial Tx via COutPoint
+// Compare the leading bits
+bool CompLeadBits(const int &nBits, const uint32_t &input, const uint32_t &target)
+{
+    return (!((input >> (32 - nBits)) ^ target));
+}
+
+type_Color GetControlColor(type_Color color)
+{
+    if (CompLeadBits(1, color, 0 ))         // 0
+        return (color >> 24) << 24;
+    else if (CompLeadBits(2, color, 2 ))    // 10
+        return (color >> 16) << 16;
+    else if (CompLeadBits(3, color, 6 ))    // 110
+        return (color >> 8) << 8;
+    else if (CompLeadBits(4, color, 14 ))   // 1110
+        return (color >> 4) << 4;
+    else                                    // 1111
+        return color;
+}
+
 bool TxInfo::init(const COutPoint &outpoint, const CBlock *pblock, bool fUndo) {
     hash = outpoint.hash;
     if (fJustStart || fUndo) {
