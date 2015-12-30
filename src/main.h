@@ -94,7 +94,7 @@ static const unsigned int DATABASE_FLUSH_INTERVAL = 24 * 60 * 60;
 /** Maximum length of reject messages. */
 static const unsigned int MAX_REJECT_MESSAGE_LENGTH = 111;
 /** Default control color */
-static const type_Color DEFAULT_ADMIN_COLOR = 0x0000;
+static const type_Color DEFAULT_ADMIN_COLOR = 0x00000000;
 
 struct BlockHasher
 {
@@ -514,6 +514,7 @@ extern std::map<std::string, std::vector<std::map<std::string, bool> > > BanVote
 bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheckFee = true);
 
 bool IsValidColor(const type_Color &color);
+type_Color GetControlColor(type_Color color);
 
 
 /**

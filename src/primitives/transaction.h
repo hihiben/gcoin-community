@@ -314,7 +314,5 @@ struct CMutableTransaction
     uint256 GetHash() const;
 };
 
-type_Color GetControlColor(type_Color color);
-
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H
 

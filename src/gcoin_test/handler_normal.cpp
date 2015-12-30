@@ -39,7 +39,7 @@ struct NormalHandlerCheckValidFixture : public NormalHandlerFixture
         member_hash = ArithToUint256(arith_uint256(3));
         out_hash = ArithToUint256(arith_uint256(4));
 
-        color = 5;
+        color = GetControlColor(5);
         pinfo = new CLicenseInfo();
         pinfo->fMemberControl = true;
         plicense->SetOwner(color, CreateAddress(), pinfo);
@@ -105,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidInactivatedColor, NormalHandlerCh
 
 BOOST_FIXTURE_TEST_CASE(NormalHandlerApplyNoMemberOnly, NormalHandlerFixture)
 {
-    type_Color color = 5;
+    type_Color color = GetControlColor(5);
     uint256 hash1 = ArithToUint256(arith_uint256(1));
     uint256 hash2 = ArithToUint256(arith_uint256(2));
     uint256 hash3 = ArithToUint256(arith_uint256(3));
@@ -127,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerApplyNoMemberOnly, NormalHandlerFixture)
 
 BOOST_FIXTURE_TEST_CASE(NormalHandlerApplyMemberOnly, NormalHandlerFixture)
 {
-    type_Color color = 5;
+    type_Color color = GetControlColor(5);
     uint256 hash1 = ArithToUint256(arith_uint256(1));
     uint256 hash2 = ArithToUint256(arith_uint256(2));
     uint256 hash3 = ArithToUint256(arith_uint256(3));
@@ -153,7 +153,7 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerUndo, NormalHandlerFixture)
     CBlock tmp;
     std::string issuer = CreateAddress();
     std::string member = CreateAddress();
-    type_Color color = 5;
+    type_Color color = GetControlColor(5);
     CLicenseInfo *pinfo = new CLicenseInfo();
     pinfo->fMemberControl = true;
     plicense->SetOwner(color, issuer, pinfo);
