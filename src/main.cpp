@@ -2330,13 +2330,38 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     return true;
 }
 
+// Referenced by IPv4 protocol, several color are reserved for special purpose
 bool IsValidColor(const type_Color &color) {
-    switch (color) {
-        case DEFAULT_ADMIN_COLOR:
-            return false;
-        default:
-            return true;
-    }
+    if ((color & 0xFF000000) == 0x00000000)         // 0.0.0.0/8
+        return false;
+    else if ((color & 0xFF000000) == 0x0A000000)    // 10.0.0.0/8
+        return false;
+    else if ((color & 0xFF000000) == 0x7F000000)    // 127.0.0.0/8
+        return false;
+    else if ((color & 0xFFFF0000) == 0xA9FE0000)    // 169.254.0.0/16
+        return false;
+    else if ((color & 0xFFF00000) == 0xAC100000)    // 172.16.0.0/12
+        return false;
+    else if ((color & 0xFFFFFF00) == 0xC0000000)    // 192.0.0.0/24
+        return false;
+    else if ((color & 0xFFFFFF00) == 0xC0000200)    // 192.0.2.0/24
+        return false;
+    else if ((color & 0xFFFFFF00) == 0xC0586300)    // 192.88.99.0/24
+        return false;
+    else if ((color & 0xFFFF0000) == 0xC0A80000)    // 192.168.0.0/16
+        return false;
+    else if ((color & 0xFFFE0000) == 0xC6120000)    // 198.18.0.0/15
+        return false;
+    else if ((color & 0xFFFFFF00) == 0xC6336400)    // 198.51.100.0/24
+        return false;
+    else if ((color & 0xFFFFFF00) == 0xCB007100)    // 203.0.113.0/24
+        return false;
+    else if (color == 0xFFFFFFFF)                   // 255.255.255.255
+        return false;
+    else if (color == DEFAULT_ADMIN_COLOR)
+        return false;
+    else
+        return true;
 }
 
 // Compare the leading bits
