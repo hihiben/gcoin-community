@@ -1214,10 +1214,11 @@ public:
                     const CBlock *pblock)
     {
         assert(tx.vout.size() > 0);
-        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
+        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR ||
+            tx.vout[0].color == GetControlColor(tx.vout[0].color)) {
             if (tx.vout[0].nValue != COIN) {
                 return RejectInvalidTypeTx(
-                        "value of color 0 must be 1 COINS", state, 100);
+                        "value of color 0 or control color must be 1 COINS", state, 100);
             }
         }
 
@@ -1300,10 +1301,19 @@ public:
 
         // Requires the admin color coin as input to create a new license.
         if (color != tx.vout[0].color) {
-            if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) || addr == "" ||
-                    !palliance->IsMember(addr))
-                return RejectInvalidTypeTx(
-                        "change color invalid", state, 100);
+            if (tx.vout[0].color == GetControlColor(tx.vout[0].color)) {
+                if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) ||
+                      addr == "" ||
+                      !palliance->IsMember(addr))
+                    return RejectInvalidTypeTx(
+                            "change color invalid (control color)", state, 100);
+            } else {
+                if (!(txinfo.GetTxType() == MINT && color == GetControlColor(tx.vout[0].color)) ||
+                      addr == "" ||
+                      !plicense->IsColorOwner(color, addr))
+                    return RejectInvalidTypeTx(
+                            "change color invalid (non-control color)", state, 100);
+            }
         }
 
         // check if license of this color is used
