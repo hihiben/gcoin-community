@@ -1017,8 +1017,6 @@ public:
                 return RejectInvalidTypeTx("check fee and color fail", state, 100);
             }
 
-            // Collect the colors might appear in the transaction.
-            set<type_Color> Activating;
             BOOST_FOREACH(const CTxIn txin, tx.vin) {
                 TxInfo txinfo;
                 if (!txinfo.init(txin.prevout, pblock)) {
@@ -1027,43 +1025,38 @@ public:
                             state, 10,
                             std::string(BAD_TXNS_TYPE_) + "not-exist");
                 }
-                string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
-                type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-                if (color != GetControlColor(color))
-                    continue;
-                if (plicense->IsColorOwner(color, senderAddr)) {
-                    Activating.insert(color);
-                }
             }
 
             // Check if receiving address is activated if the color is member-only.
             unsigned int index = 0;
             BOOST_FOREACH(const CTxOut txout, tx.vout) {
-                if (!IsValidColor(txout.color)) {
-                    return RejectInvalidTypeTx("color invalid", state, 100);
-                }
-                if (!plicense->IsColorExist(txout.color)) {
-                    return RejectInvalidTypeTx(
-                            strprintf("no license for color %u", txout.color),
-                            state, 100);
-                }
-                string receiverAddr = GetTxOutputAddr(tx, index);
-                index++;
-                // Only process with the member-only colors.
-                if (Activating.find(txout.color) == Activating.end() &&
-                    plicense->IsMemberOnly(GetControlColor(txout.color)) &&
-                    !plicense->IsColorOwner(txout.color, receiverAddr)) {
-                    if (!pactivate->IsColorExist(txout.color)) {
-                        string error_msg = strprintf(
-                                "no activate record for color %u", txout.color);
-                        return RejectInvalidTypeTx(error_msg, state, 100);
-                    }
-                    if (!pactivate->IsActivated(txout.color, receiverAddr)) {
+                if (IsValidColor(txout.color)) {
+                    if (!plicense->IsColorExist(txout.color)) {
                         return RejectInvalidTypeTx(
-                                "receiver not record in blockchain",
-                                state, 10,
-                                std::string(BAD_TXNS_TYPE_) + "not-exist");
-
+                                strprintf("no license for color %u", txout.color),
+                                state, 100);
+                    }
+                    string receiverAddr = GetTxOutputAddr(tx, index);
+                    index++;
+                    if (plicense->IsMemberOnly(GetControlColor(txout.color)) &&
+                        !plicense->IsColorOwner(txout.color, receiverAddr)) {
+                        if (!pactivate->IsColorExist(txout.color)) {
+                            string error_msg = strprintf(
+                                    "no activate record for color %u", txout.color);
+                            return RejectInvalidTypeTx(error_msg, state, 100);
+                        }
+                        if (!pactivate->IsActivated(txout.color, receiverAddr)) {
+                            return RejectInvalidTypeTx(
+                                    "receiver not record in blockchain",
+                                    state, 10,
+                                    std::string(BAD_TXNS_TYPE_) + "not-exist");
+                        }
+                    }
+                } else {
+                    if (txout.color == DEFAULT_ADMIN_COLOR) {
+                        return RejectInvalidTypeTx(
+                                "admin color token cannot be transferred",
+                                state, 100);
                     }
                 }
             }
@@ -1077,107 +1070,11 @@ public:
         if (!tx.IsCoinBase()) {
             BOOST_FOREACH(const CTxOut txout, tx.vout) {
                 if (!IsValidColor(txout.color)) {
-                    return RejectInvalidTypeTx("color invalid", state, 100);
+                    if (txout.color == DEFAULT_ADMIN_COLOR) {
+                        return RejectInvalidTypeTx("Admin color cannot be transferred", state, 100);
+                    }
                 }
             }
-        }
-        return true;
-    }
-
-    bool Apply(const CTransaction &tx, const CBlock *pblock)
-    {
-        if (tx.IsCoinBase())
-            return true;
-
-        // Activation process.
-        if (!HandleActivateTx_(tx, pblock))
-            return error("%s() : Activate %s fail", __func__, tx.GetHash().ToString());
-
-        return true;
-    }
-
-    bool Undo(const CTransaction &tx, const CBlock *pblock)
-    {
-        if (tx.IsCoinBase())
-            return true;
-
-        // Deactivation process.
-        if (!HandleDeactivateTx_(tx, pblock))
-            return error("%s() : Deactivate %s fail", __func__, tx.GetHash().ToString());
-
-        return true;
-    }
-
-private:
-    /*!
-     * @brief   Activation process for NORMAL transaction.
-     * The activation process is triggered by NORMAL type transactions.
-     * Activation rules:
-     *  Only member-only colors needed to be processed.
-     *  The receiver will be activated by the corresponding color.
-     */
-    bool HandleActivateTx_(const CTransaction &tx, const CBlock *pblock)
-    {
-        LOCK(cs_main);
-        set<type_Color> ActivateColor;
-        BOOST_FOREACH(const CTxIn txin, tx.vin) {
-            TxInfo txinfo;
-            if (!txinfo.init(txin.prevout, pblock)) {
-
-                return error("%s() : Fetch input fail", __func__);
-            }
-            string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
-            type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-
-            if (color != GetControlColor(color))
-                continue;
-            if (!plicense->IsMemberOnly(color))
-                continue;
-            if (plicense->IsColorOwner(color, senderAddr)) {
-                ActivateColor.insert(color);
-            }
-        }
-
-        for (unsigned int i = 0; i < tx.vout.size(); i++) {
-            if (!plicense->IsMemberOnly(tx.vout[i].color))
-                continue;
-            if (ActivateColor.find(tx.vout[i].color) == ActivateColor.end())
-                continue;
-
-            string receiverAddr = GetTxOutputAddr(tx, i);
-            pactivate->Activate(tx.vout[i].color, receiverAddr);
-        }
-        return true;
-    }
-
-    bool HandleDeactivateTx_(const CTransaction &tx, const CBlock *pblock)
-    {
-        LOCK(cs_main);
-        set<type_Color> DeactivateColor;
-        BOOST_FOREACH(const CTxIn txin, tx.vin) {
-            TxInfo txinfo;
-            if (!txinfo.init(txin.prevout, pblock, true)) {
-
-                return error("%s() : Fetch input fail", __func__);
-            }
-            string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
-            type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-
-            if (color != GetControlColor(color))
-                continue;
-            if (!plicense->IsMemberOnly(color))
-                continue;
-            if (plicense->IsColorOwner(color, senderAddr)) {
-                DeactivateColor.insert(color);
-            }
-        }
-
-        for (unsigned int i = 0; i < tx.vout.size(); i++) {
-            if (DeactivateColor.find(tx.vout[i].color) == DeactivateColor.end())
-                continue;
-
-            string receiverAddr = GetTxOutputAddr(tx, i);
-            pactivate->Deactivate(tx.vout[i].color, receiverAddr);
         }
         return true;
     }
@@ -1194,19 +1091,23 @@ public:
     {
         // first check if he is AE or not, AE can MINT color 0 without License
         string addr = GetTxOutputAddr(tx, 0);
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR) {
+        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
+            if (!palliance->IsMember(addr)) {
+                return RejectInvalidTypeTx(
+                        "not alliance but mint admin color", state, 100);
+            }
+        } else if (tx.vout[0].color == FEE_COLOR) {
+            if (!palliance->IsMember(addr)) {
+                return RejectInvalidTypeTx(
+                        "not alliance but mint fee color", state, 100);
+            }
+        } else {
             if (!plicense->IsColorOwner(tx.vout[0].color, addr)) {
                 return RejectInvalidTypeTx(
                         strprintf("mint color=%u without license", tx.vout[0].color),
                         state, 100);
             }
-        } else {
-            if (!palliance->IsMember(addr)) {
-                return RejectInvalidTypeTx(
-                        "not AE but mint color=0", state, 100);
-            }
         }
-
         return true;
     };
 
@@ -1214,8 +1115,7 @@ public:
                     const CBlock *pblock)
     {
         assert(tx.vout.size() > 0);
-        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR ||
-            tx.vout[0].color == GetControlColor(tx.vout[0].color)) {
+        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
             if (tx.vout[0].nValue != COIN) {
                 return RejectInvalidTypeTx(
                         "value of color 0 or control color must be 1 COINS", state, 100);
@@ -1247,10 +1147,15 @@ public:
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
         assert(tx.vout.size() > 0);
-        if (!plicense->IsColorExist(tx.vout[0].color))
-            return error("%s() : no license for color %u", __func__, tx.vout[0].color);
-        // Record the coin amount.
-        plicense->AddNumOfCoins(tx.vout[0].color, tx.vout[0].nValue);
+        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
+            return true;
+        } else if (tx.vout[0].color == FEE_COLOR) {
+            return true;
+        } else {
+            if (!plicense->IsColorExist(tx.vout[0].color))
+                return error("%s() : no license for color %u", __func__, tx.vout[0].color);
+            plicense->AddNumOfCoins(tx.vout[0].color, tx.vout[0].nValue);
+        }
         return true;
     }
 
@@ -1259,12 +1164,15 @@ public:
         assert(tx.vout.size() > 0);
         if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
             return true;
+        } else if (tx.vout[0].color == FEE_COLOR) {
+            return true;
+        } else {
+            if (!plicense->IsColorExist(tx.vout[0].color)) {
+                LogPrintf("%s() fail : no license for color %u", __func__, tx.vout[0].color);
+                return false;
+            }
+            plicense->AddNumOfCoins(tx.vout[0].color, -tx.vout[0].nValue);
         }
-        if (!plicense->IsColorExist(tx.vout[0].color)) {
-            LogPrintf("%s() fail : no license for color %u", __func__, tx.vout[0].color);
-            return false;
-        }
-        plicense->AddNumOfCoins(tx.vout[0].color, -tx.vout[0].nValue);
         return true;
     }
 };
@@ -1429,6 +1337,106 @@ private:
 };
 
 
+class Handler_Activate_ : public HandlerInterface, public HandlerUtility_
+{
+public:
+    Handler_Activate_() : HandlerUtility_(ACTIVATE) {}
+
+    bool CheckValid(const CTransaction &tx, CValidationState &state,
+                    const CBlock *pblock)
+    {
+        set<type_Color> Activating;
+        BOOST_FOREACH(const CTxIn txin, tx.vin) {
+            TxInfo txinfo;
+            if (!txinfo.init(txin.prevout, pblock)) {
+                return RejectInvalidTypeTx(
+                        "Fetch input fail",
+                        state, 10,
+                        std::string(BAD_TXNS_TYPE_) + "not-exist");
+            }
+            string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
+            type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+            tx_type type = txinfo.GetTxType();
+            if (!(type == MINT || type == ACTIVATE))
+                return RejectInvalidTypeTx("Input for ACTIVATE can only be MINT or ACTIVATE type",
+                        state, 100);
+            if (color != GetControlColor(color))
+                return RejectInvalidTypeTx("Input for ACTIVATE should be control color",
+                        state, 100);
+            if (!plicense->IsColorOwner(color, senderAddr))
+                return RejectInvalidTypeTx("Sender must be the color owner",
+                        state, 100);
+            if (!IsValidColor(color))
+                return RejectInvalidTypeTx("color invalid", state, 100);
+            if (!plicense->IsMemberOnly(color))
+                return RejectInvalidTypeTx("not member-only", state, 30);
+            Activating.insert(color);
+            if (Activating.size() > 1)
+                return RejectInvalidTypeTx("Only 1 color can be activated at once", state, 100);
+        }
+        BOOST_FOREACH(const CTxOut txout, tx.vout) {
+            if (Activating.find(txout.color) == Activating.end())
+                return RejectInvalidTypeTx(
+                        "Color of input/output not matching",
+                        state, 100);
+            if (!plicense->IsColorExist(txout.color))
+                return RejectInvalidTypeTx(
+                        strprintf("no license for color %u", txout.color),
+                        state, 100);
+        }
+        return true;
+    };
+
+    bool CheckFormat(const CTransaction &tx, CValidationState &state,
+                    const CBlock *pblock)
+    {
+        BOOST_FOREACH(const CTxOut txout, tx.vout) {
+            if (!IsValidColor(txout.color)) {
+                return RejectInvalidTypeTx("color invalid", state, 100);
+            }
+        }
+        return true;
+    }
+
+    bool Apply(const CTransaction &tx, const CBlock *pblock)
+    {
+        if (!HandleActivateTx_(tx, pblock))
+            return error("%s() : Activate fail", __func__);
+
+        return true;
+    }
+
+    bool Undo(const CTransaction &tx, const CBlock *pblock)
+    {
+        if (!HandleDeactivateTx_(tx, pblock))
+            return error("%s() : Deactivate fail", __func__);
+
+        return true;
+    }
+
+private:
+    bool HandleActivateTx_(const CTransaction &tx, const CBlock *pblock)
+    {
+        LOCK(cs_main);
+        for (unsigned int i = 0; i < tx.vout.size(); i++) {
+            string receiverAddr = GetTxOutputAddr(tx, i);
+            pactivate->Activate(tx.vout[i].color, receiverAddr);
+        }
+        return true;
+    }
+
+    bool HandleDeactivateTx_(const CTransaction &tx, const CBlock *pblock)
+    {
+        LOCK(cs_main);
+        for (unsigned int i = 0; i < tx.vout.size(); i++) {
+            string receiverAddr = GetTxOutputAddr(tx, i);
+            pactivate->Deactivate(tx.vout[i].color, receiverAddr);
+        }
+        return true;
+    }
+};
+
+
 class Handler_Vote_ : public HandlerInterface, public HandlerUtility_
 {
 public:
@@ -1481,7 +1489,7 @@ public:
                     const CBlock *pblock)
     {
         if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
-            return RejectInvalidTypeTx("color must be 0", state, 100);
+            return RejectInvalidTypeTx("color must be admin", state, 100);
 
         // for vote type tx, output size must be 1 and
         // vout[0].nValue must be 1
@@ -1667,7 +1675,7 @@ public:
                     const CBlock *pblock)
     {
         if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
-            return RejectInvalidTypeTx("color must be 0", state, 100);
+            return RejectInvalidTypeTx("color must be admin", state, 100);
 
         // for ban-vote type tx, output size must be 1 and
         // vout[0].nValue must be 1
@@ -2096,6 +2104,7 @@ public:
 Handler_Normal_ handler_normal_;
 Handler_Mint_ handler_mint_;
 Handler_License_ handler_license_;
+Handler_Activate_ handler_activate_;
 Handler_Vote_ handler_vote_;
 Handler_BanVote_ handler_ban_vote_;
 Handler_Order_ handler_order_;
@@ -2115,6 +2124,8 @@ HandlerInterface *GetHandler(const tx_type &type)
             return &handler_mint_;
         case LICENSE:
             return &handler_license_;
+        case ACTIVATE:
+            return &handler_activate_;
         case VOTE:
             return &handler_vote_;
         case BANVOTE:
