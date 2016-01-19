@@ -95,6 +95,7 @@ static const unsigned int DATABASE_FLUSH_INTERVAL = 24 * 60 * 60;
 static const unsigned int MAX_REJECT_MESSAGE_LENGTH = 111;
 /** Default control color */
 static const type_Color DEFAULT_ADMIN_COLOR = 0x00000000;
+static const type_Color DEFAULT_FEE_COLOR = 0x00000001;
 
 struct BlockHasher
 {
@@ -514,7 +515,7 @@ extern std::map<std::string, std::vector<std::map<std::string, bool> > > BanVote
 bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheckFee = true);
 
 bool IsValidColor(const type_Color &color);
-type_Color GetControlColor(type_Color color);
+type_Color GetMainColor(type_Color color);
 
 
 /**
@@ -678,7 +679,6 @@ extern CCoinsViewCache *pcoinsTip;
 /** Global variable that points to the active block tree (protected by cs_main) */
 extern CBlockTreeDB *pblocktree;
 
-static const type_Color FEE_COLOR = 1;
 static const int64_t FEE_VALUE = COIN;
 
 // Transaction fee

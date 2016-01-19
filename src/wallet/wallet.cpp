@@ -1700,9 +1700,9 @@ void CWallet::AvailableCoinsForType(vector<COutput>& vCoins, const type_Color& s
                     fMintLicense = false;
                 // (2) AE mint new license
                 else if (pcoin->type == MINT && !plicense->HasColorOwner(send_color)) {
-                    if (send_color == GetControlColor(send_color) && pcoin->vout[0].color == DEFAULT_ADMIN_COLOR)
+                    if (send_color == GetMainColor(send_color) && pcoin->vout[0].color == DEFAULT_ADMIN_COLOR)
                         fMintLicense = true;
-                    else if (send_color != GetControlColor(send_color) && pcoin->vout[0].color == GetControlColor(send_color))
+                    else if (send_color != GetMainColor(send_color) && pcoin->vout[0].color == GetMainColor(send_color))
                         fMintLicense = true;
                     else
                         continue;
@@ -1734,8 +1734,8 @@ void CWallet::AvailableCoinsForType(vector<COutput>& vCoins, const type_Color& s
                                 // no send_color license owner, AE create new license.
                                 vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
                                 return;
-                        } else if (fMintLicense && plicense->IsColorOwner(GetControlColor(send_color), addr)) {
-                                // no send_color license owner, control color owner create new license.
+                        } else if (fMintLicense && plicense->IsColorOwner(GetMainColor(send_color), addr)) {
+                                // no send_color license owner, main color owner create new license.
                                 vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
                                 return;
                         } else if (plicense->IsColorOwner(send_color, addr)) {
@@ -1745,7 +1745,7 @@ void CWallet::AvailableCoinsForType(vector<COutput>& vCoins, const type_Color& s
                         }
                     } else if (type == ACTIVATE) {
                         if (plicense->IsColorOwner(send_color, addr)) {
-                            // send activate transaction of a control color
+                            // send activate transaction of a main color
                             vCoins.push_back(COutput(pcoin, i, nDepth, (mine & ISMINE_SPENDABLE) != ISMINE_NO));
                             return;
                         }
@@ -3519,7 +3519,7 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
         txNew.vout[0].scriptPubKey = scriptPubKey;
         txNew.vout[0].nValue = nValue * COIN;
         txNew.vout[0].color = DEFAULT_ADMIN_COLOR;
-    } else if (color == FEE_COLOR) {
+    } else if (color == DEFAULT_FEE_COLOR) {
         CPubKey pubkey;
         pubkey = vchDefaultKey;
         scriptPubKey = CScript() << ToByteVector(pubkey) << OP_CHECKSIG;
@@ -3531,7 +3531,7 @@ string CWallet::MintMoney(const CAmount& nValue, const type_Color& color, CWalle
         txNew.vout.resize(1);
         txNew.vout[0].scriptPubKey = scriptPubKey;
         txNew.vout[0].nValue = nValue * COIN;
-        txNew.vout[0].color = FEE_COLOR;
+        txNew.vout[0].color = DEFAULT_FEE_COLOR;
     } else if (!GetLicensePubKey(color, scriptPubKey)) {
         return "you don't have this license";
     } else {
