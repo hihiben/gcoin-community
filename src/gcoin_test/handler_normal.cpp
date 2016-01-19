@@ -87,7 +87,6 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidPass, NormalHandlerCheckValidFixt
                 CTransaction(transactions[member_hash]), state, NULL) == true);
 }
 
-
 BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidInactivatedMember, NormalHandlerCheckValidFixture)
 {
     pactivate->Deactivate(color, receiver);
