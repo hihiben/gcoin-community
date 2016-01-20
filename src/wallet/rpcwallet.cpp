@@ -481,7 +481,7 @@ static void CreateLicense(const CTxDestination &address, const type_Color color,
     if (plicense->IsColorExist(color))
         throw JSONRPCError(RPC_WALLET_ERROR, "License is already created. Please remove the license info if you are about to transfer your license.");
 
-    CAmount curBalance = pwalletMain->GetColor0Balance();
+    CAmount curBalance = pwalletMain->GetColorAdminBalance();
     if (SEND_TYPE_AMOUNT > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient license funds");
 

@@ -1029,7 +1029,7 @@ public:
                 }
                 string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
                 type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-                if (color != GetControlColor(color))
+                if (color != GetMainColor(color))
                     continue;
                 if (plicense->IsColorOwner(color, senderAddr)) {
                     Activating.insert(color);
@@ -1057,7 +1057,7 @@ public:
                         else {
                             string error_msg = strprintf(
                                     "no activate record for color %u of %s", txout.color, receiverAddr);
-                            return RejectInvalidTypeTx(error_msg, state, 100);
+                            return RejectInvalidTypeTx(error_msg, state, 10);
                         }
                     } else {
                         continue;
@@ -1133,7 +1133,7 @@ private:
             string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
 
-            if (color != GetControlColor(color))
+            if (color != GetMainColor(color))
                 continue;
             if (!plicense->IsMemberOnly(color))
                 continue;
@@ -1167,7 +1167,7 @@ private:
             string senderAddr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
 
-            if (color != GetControlColor(color))
+            if (color != GetMainColor(color))
                 continue;
             if (!plicense->IsMemberOnly(color))
                 continue;
@@ -1214,11 +1214,6 @@ public:
                         strprintf("mint color=%u without license", tx.vout[0].color),
                         state, 100);
             }
-        } else {
-            if (!palliance->IsMember(addr)) {
-                return RejectInvalidTypeTx(
-                        "not AE but mint color=0", state, 100);
-            }
         }
 
         return true;
@@ -1229,7 +1224,7 @@ public:
     {
         assert(tx.vout.size() > 0);
         if (tx.vout[0].color == DEFAULT_ADMIN_COLOR ||
-            tx.vout[0].color == GetControlColor(tx.vout[0].color)) {
+            tx.vout[0].color == GetMainColor(tx.vout[0].color)) {
             if (tx.vout[0].nValue != COIN) {
                 return RejectInvalidTypeTx(
                         "value of admin color must be 1 COIN", state, 100);
