@@ -45,6 +45,18 @@ struct RPCTestFixture : public GlobalSetupFixture, public CacheSetupFixture
 
 BOOST_AUTO_TEST_SUITE(test_rpc_command)
 
+BOOST_FIXTURE_TEST_CASE(rpc_activate_test, RPCTestWalletFixture)
+{
+    BOOST_CHECK(pwalletTest != NULL);
+    string strRPC = "activate [\"13wjNR5waStdfb5zeyEhbncHF6BFDRrEVF\",\"15SW5PL6z9NPLmU6n4gr4nfHiJA5rbqDzU\"] 3758096384";
+    pwalletTest->setColor(3758096384);
+    pwalletTest->setType(ACTIVATE);
+    BOOST_CHECK_THROW(CallRPC(strRPC), runtime_error);
+
+    pwalletTest->setColorAmount(100 * COIN);
+    BOOST_CHECK_NO_THROW(CallRPC(strRPC));
+}
+
 BOOST_FIXTURE_TEST_CASE(rpc_getfixedaddress_test, RPCTestWalletFixture)
 {
     BOOST_CHECK(pwalletMain != NULL);

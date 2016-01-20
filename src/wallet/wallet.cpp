@@ -1406,7 +1406,7 @@ void CWallet::ResendWalletTransactions(int64_t nBestBlockTime)
  */
 
 
-CAmount CWallet::GetColor0Balance() const
+CAmount CWallet::GetColorAdminBalance() const
 {
     CAmount nTotal = 0;
     {
@@ -1423,7 +1423,7 @@ CAmount CWallet::GetColor0Balance() const
 
 CAmount CWallet::GetVoteBalance() const
 {
-    return GetColor0Balance();
+    return GetColorAdminBalance();
 }
 
 bool CWallet::GetLicensePubKey(const type_Color& color, CScript& scriptPubKey) const

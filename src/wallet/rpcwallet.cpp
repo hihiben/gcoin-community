@@ -481,7 +481,7 @@ static void CreateLicense(const CTxDestination &address, const type_Color color,
     if (plicense->IsColorExist(color))
         throw JSONRPCError(RPC_WALLET_ERROR, "License is already created. Please remove the license info if you are about to transfer your license.");
 
-    CAmount curBalance = pwalletMain->GetColor0Balance();
+    CAmount curBalance = pwalletMain->GetColorAdminBalance();
     if (SEND_TYPE_AMOUNT > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient license funds");
 
@@ -1628,24 +1628,20 @@ Value activate(const Array& params, bool fHelp)
             "\nSend multiple times. Amounts are double-precision floating point numbers."
             + HelpRequiringPassphrase() + "\n"
             "\nArguments:\n"
-            "2. \"addresses\"           (string, required) A json object with addresses\n"
+            "1. \"addresses\"           (string, required) A json object with addresses\n"
             "    {\n"
             "      \"address\"          (string, required) The activating address\n"
             "      ,...\n"
             "    }\n"
-            "3. color                   (numeric, required) The currency type (color) to be activated.\n"
+            "2. color                   (numeric, required) The currency type (color) to be activated.\n"
             "\nResult:\n"
             "\"transactionid\"          (string) The transaction id for the send. Only 1 transaction is created regardless of \n"
             "                                    the number of addresses.\n"
             "\nExamples:\n"
-            "\nSend two amounts to two different addresses:\n"
-            + HelpExampleCli("sendmany", "\"\" \"{\\\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\\\":0.01,\\\"1353tsE8YMTA4EuV7dgUXGjNFf9KpVvKHz\\\":0.02}\" 1") +
-            "\nSend two amounts to two different addresses setting the confirmation and comment:\n"
-            + HelpExampleCli("sendmany", "\"\" \"{\\\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\\\":0.01,\\\"1353tsE8YMTA4EuV7dgUXGjNFf9KpVvKHz\\\":0.02}\" 1 6 \"testing\"") +
-            "\nSend two amounts to two different addresses, subtract fee from amount:\n"
-            + HelpExampleCli("sendmany", "\"\" \"{\\\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\\\":0.01,\\\"1353tsE8YMTA4EuV7dgUXGjNFf9KpVvKHz\\\":0.02}\" 1 1 \"\" \"[\\\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\\\",\\\"1353tsE8YMTA4EuV7dgUXGjNFf9KpVvKHz\\\"]\"") +
+            "\nActivate two address for color 3758096384:\n"
+            + HelpExampleCli("activate", "\"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\" 3758096384") +
             "\nAs a json rpc call\n"
-            + HelpExampleRpc("sendmany", "\"\", \"{\\\"1D1ZrZNe3JUo7ZycKEYQQiQAWd9y54F4XZ\\\":0.01,\\\"1353tsE8YMTA4EuV7dgUXGjNFf9KpVvKHz\\\":0.02}\", 1, 6, \"testing\"")
+            + HelpExampleRpc("activate", "\"[\\\"16sSauSf5pF2UkUwvKGq4qjNRzBZYqgEL5\\\",\\\"171sgjn4YtPu27adkKGrdDwzRTxnRkBfKV\\\"]\", 3758096384")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);

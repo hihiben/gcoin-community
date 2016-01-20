@@ -1048,7 +1048,7 @@ public:
                         else {
                             string error_msg = strprintf(
                                     "no activate record for color %u of %s", txout.color, receiverAddr);
-                            return RejectInvalidTypeTx(error_msg, state, 100);
+                            return RejectInvalidTypeTx(error_msg, state, 10);
                         }
                     } else {
                         continue;

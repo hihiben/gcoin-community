@@ -38,19 +38,23 @@ struct NormalHandlerCheckValidFixture : public NormalHandlerFixture
         in_hash = ArithToUint256(arith_uint256(1));
         member_hash = ArithToUint256(arith_uint256(3));
         out_hash = ArithToUint256(arith_uint256(4));
-        color = 0xFFFFFFFE;
+        main_color = 0xE0000000;
+        sub_color = 0xE0000001;
         pinfo = new CLicenseInfo();
         pinfo->fMemberControl = true;
-        plicense->SetOwner(color, CreateAddress(), pinfo);
+        main_issuer = CreateAddress();
+        sub_issuer = CreateAddress();
+        plicense->SetOwner(main_color, main_issuer, pinfo);
+        plicense->SetOwner(sub_color, sub_issuer, pinfo);
 
         member = CreateAddress();
         receiver = CreateAddress();
-        pactivate->Activate(color, receiver);
+        pactivate->Activate(main_color, receiver);
         CreateTransaction(in_hash, MINT);
         CreateTransaction(member_hash, NORMAL);
         CreateTransaction(out_hash, NORMAL);
-        ConnectTransactions(in_hash, member_hash, COIN, member, color);
-        ConnectTransactions(member_hash, out_hash, COIN, receiver, color);
+        ConnectTransactions(in_hash, member_hash, COIN, member, sub_color);
+        ConnectTransactions(member_hash, out_hash, COIN, receiver, sub_color);
     }
 
     ~NormalHandlerCheckValidFixture()
@@ -74,8 +78,8 @@ struct NormalHandlerCheckValidFixture : public NormalHandlerFixture
     }
 
     uint256 in_hash, member_hash, out_hash;
-    std::string member, receiver;
-    type_Color color;
+    std::string main_issuer, sub_issuer, member, receiver;
+    type_Color main_color, sub_color;
     CValidationState state;
     CLicenseInfo *pinfo;
 };
@@ -86,6 +90,21 @@ BOOST_FIXTURE_TEST_CASE(NormalHandlerCheckValidPass, NormalHandlerCheckValidFixt
     BOOST_CHECK(handler->CheckValid(
                 CTransaction(transactions[member_hash]), state, NULL) == true);
 }
+
+
+BOOST_FIXTURE_TEST_CASE(NormalHandlerInactivatedMember, NormalHandlerCheckValidFixture)
+{
+    pactivate->Deactivate(main_color, receiver);
+    CheckFalse(10, __func__);
+}
+
+
+BOOST_FIXTURE_TEST_CASE(NormalHandlerNoColor, NormalHandlerCheckValidFixture)
+{
+    plicense->RemoveColor(sub_color);
+    CheckFalse(100, __func__);
+}
+
 
 BOOST_AUTO_TEST_SUITE_END(); // CacheSetup
 
