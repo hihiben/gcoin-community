@@ -1062,13 +1062,6 @@ public:
                     } else {
                         continue;
                     }
-                    if (!pactivate->IsActivated(txout.color, receiverAddr)) {
-                        return RejectInvalidTypeTx(
-                                "receiver not record in blockchain",
-                                state, 10,
-                                std::string(BAD_TXNS_TYPE_) + "not-exist");
-
-                    }
                 }
             }
         }
@@ -1325,13 +1318,11 @@ public:
         if (color != tx.vout[0].color) {
             if (tx.vout[0].color == GetMainColor(tx.vout[0].color)) {
                 if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) ||
-                      addr == "" ||
                       !palliance->IsMember(addr))
                     return RejectInvalidTypeTx(
                             "change color invalid (Main Color)", state, 100);
             } else {
                 if (!(txinfo.GetTxType() == MINT && color == GetMainColor(tx.vout[0].color)) ||
-                      addr == "" ||
                       !plicense->IsColorOwner(color, addr))
                     return RejectInvalidTypeTx(
                             "change color invalid (Sub Color)", state, 100);
