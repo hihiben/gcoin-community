@@ -1053,12 +1053,6 @@ public:
                     } else {
                         continue;
                     }
-                } else {
-                    if (txout.color == DEFAULT_ADMIN_COLOR) {
-                        return RejectInvalidTypeTx(
-                                "admin color token cannot be transferred",
-                                state, 100);
-                    }
                 }
             }
         }
@@ -1211,13 +1205,11 @@ public:
         if (color != tx.vout[0].color) {
             if (tx.vout[0].color == GetMainColor(tx.vout[0].color)) {
                 if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) ||
-                      addr == "" ||
                       !palliance->IsMember(addr))
                     return RejectInvalidTypeTx(
                             "change color invalid (Main Color)", state, 100);
             } else {
                 if (!(txinfo.GetTxType() == MINT && color == GetMainColor(tx.vout[0].color)) ||
-                      addr == "" ||
                       !plicense->IsColorOwner(color, addr))
                     return RejectInvalidTypeTx(
                             "change color invalid (Sub Color)", state, 100);
