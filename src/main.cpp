@@ -1319,11 +1319,19 @@ public:
             // New license requires valid license information.
             pinfo = new CLicenseInfo();
             if (tx.vout.size() > 1) {
+                vector<unsigned char> vchInfo;
                 CScript scriptInfo = tx.vout[1].scriptPubKey;
-                vector<unsigned char> vch = ParseHex(scriptInfo.ToString().substr(10));
-                if (!pinfo->DecodeInfo(string(vch.begin(), vch.end())))
+                for (CScript::const_iterator pc = scriptInfo.begin(); pc < scriptInfo.end();) {
+                    opcodetype opcode;
+                    if (!scriptInfo.GetOp(pc, opcode, vchInfo))
+                        return false;
+                }
+                CDataStream ssLicenseInfo(vchInfo, SER_DISK, CLIENT_VERSION);
+                ssLicenseInfo >> (*pinfo);
+                if (!pinfo->IsValid())
                     return RejectInvalidTypeTx(
                             "Decode license info failed when first create license", state, 100);
+
             } else
                 return RejectInvalidTypeTx(
                         "License info not supplied", state, 100);
@@ -1355,12 +1363,15 @@ public:
         DetachInfo();
         if (tx.vout.size() > 1 && !pinfo) {
             pinfo = new CLicenseInfo();
+            vector<unsigned char> vchInfo;
             CScript scriptInfo = tx.vout[1].scriptPubKey;
-            vector<unsigned char> vch = ParseHex(scriptInfo.ToString().substr(10));
-            if (!pinfo->DecodeInfo(string(vch.begin(), vch.end()))) {
-                LogPrintf("%s() : Decode license info failed when first create license", __func__);
-                return error("%s(): Handle License %s failed", __func__, tx.GetHash().ToString());
+            for (CScript::const_iterator pc = scriptInfo.begin(); pc < scriptInfo.end();) {
+                opcodetype opcode;
+                if (!scriptInfo.GetOp(pc, opcode, vchInfo))
+                    return false;
             }
+            CDataStream ssLicenseInfo(vchInfo, SER_DISK, CLIENT_VERSION);
+            ssLicenseInfo >> (*pinfo);
         }
         string receiverAddr = GetTxOutputAddr(tx, 0);
 
