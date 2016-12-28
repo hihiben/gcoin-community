@@ -43,11 +43,10 @@ std::string CTxIn::ToString() const
     str += ")";
     return str;
 }
-CTxOut::CTxOut(const CAmount& nValueIn, CScript scriptPubKeyIn, type_Color colorIn)
+CTxOut::CTxOut(const CColorAmount& mValueIn, CScript scriptPubKeyIn)
 {
-    nValue = nValueIn;
+    mValue = mValueIn;
     scriptPubKey = scriptPubKeyIn;
-    color = colorIn;
 }
 
 uint256 CTxOut::GetHash() const
@@ -57,7 +56,7 @@ uint256 CTxOut::GetHash() const
 
 std::string CTxOut::ToString() const
 {
-    return strprintf("CTxOut(nValue=%d.%08d, scriptPubKey=%s, color=%d)", nValue / COIN, nValue % COIN, scriptPubKey.ToString().substr(0,30), color);
+    return strprintf("CTxOut(mValue=%s, scriptPubKey=%s)", FormatMoney(mValue), scriptPubKey.ToString().substr(0,30));
 }
 
 CMutableTransaction::CMutableTransaction() : nVersion(CTransaction::CURRENT_VERSION), nLockTime(0), type(NORMAL) {}
