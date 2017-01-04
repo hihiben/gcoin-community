@@ -859,25 +859,19 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
         return state.DoS(100, error("CheckTransaction(): size limits failed"),
                          REJECT_INVALID, "bad-txns-oversize");
 
-    colorAmount_t nValueOut_;
+    CColorAmount mValueOut;
     BOOST_FOREACH(const CTxOut& txout, tx.vout)
     {
-        if (txout.nValue < 0)
+        if (txout.mValue.Value() < 0)
             return state.DoS(100, error("CheckTransaction(): txout.nValue negative"),
                              REJECT_INVALID, "bad-txns-vout-negative");
-        if (txout.nValue > MAX_MONEY)
+        if (txout.mValue.Value() > MAX_MONEY)
             return state.DoS(100, error("CheckTransaction(): txout.nValue too high"),
                              REJECT_INVALID, "bad-txns-vout-toolarge");
-
-        type_Color color = txout.color;
-        if (nValueOut_.find(color) != nValueOut_.end()) {
-            nValueOut_[color] += txout.nValue;
-            if (!MoneyRange(nValueOut_[color]))
-                return state.DoS(100, error("CheckTransaction(): txout total out of range"),
-                                 REJECT_INVALID, "bad-txns-txouttotal-toolarge");
-        } else {
-            nValueOut_[color] = txout.nValue;
-        }
+        mValueOut += txout.mValue;
+        if (!MoneyRange(mValueOut[txout.mValue.Color()]))
+            return state.DoS(100, error("CheckTransaction(): txout total out of range"),
+                             REJECT_INVALID, "bad-txns-txouttotal-toolarge");
     }
 
     // Check for duplicate inputs
