@@ -434,7 +434,7 @@ struct CDiskTxPos : public CDiskBlockPos {
 };
 
 
-CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree);
+CColorAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree);
 
 /**
  * Check transaction inputs, and make sure any

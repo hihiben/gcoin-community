@@ -899,7 +899,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
     return true;
 }
 
-CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree)
+CColorAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowFree)
 {
     {
         LOCK(mempool.cs);
@@ -908,10 +908,10 @@ CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowF
         CAmount nFeeDelta = 0;
         mempool.ApplyDeltas(hash, dPriorityDelta, nFeeDelta);
         if (dPriorityDelta > 0 || nFeeDelta > 0)
-            return 0;
+            return CColorAmount(1, 0);
     }
 
-    CAmount nMinFee = ::minRelayTxFee.GetFee(nBytes);
+    CColorAmount mMinFee = ::minRelayTxFee.GetFee(nBytes);
 
     if (fAllowFree) {
         // There is a free transaction area in blocks created by most miners,
@@ -919,12 +919,12 @@ CAmount GetMinRelayFee(const CTransaction& tx, unsigned int nBytes, bool fAllowF
         //   to be considered to fall into this category. We don't want to encourage sending
         //   multiple transactions instead of one big transaction to avoid fees.
         if (nBytes < (DEFAULT_BLOCK_PRIORITY_SIZE - 1000))
-            nMinFee = 0;
+            mMinFee.init(1, 0);
     }
 
-    if (!MoneyRange(nMinFee))
-        nMinFee = MAX_MONEY;
-    return nMinFee;
+    if (!MoneyRange(mMinFee.Value()))
+        mMinFee.init(1, MAX_MONEY);
+    return mMinFee;
 }
 
 
@@ -1997,7 +1997,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         CCoinsView dummy;
         CCoinsViewCache view(&dummy);
 
-        CAmount nValueIn = 0;
+        CColorAmount mValueIn;
         {
         LOCK(pool.cs);
         CCoinsViewMemPool viewMemPool(pcoinsTip, pool);
@@ -2047,7 +2047,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
         // Bring the best block into scope
         view.GetBestBlock();
 
-        nValueIn = view.GetValueIn(tx);
+        mValueIn = view.GetValueIn(tx);
 
         // we have all inputs cached now, so switch back to dummy, so we don't need to keep lock on mempool
         view.SetBackend(dummy);
@@ -2070,20 +2070,20 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
                                    hash.ToString(), nSigOps, MAX_STANDARD_TX_SIGOPS),
                              REJECT_NONSTANDARD, "bad-txns-too-many-sigops");
 
-        CAmount nValueOut = tx.GetValueOut();
-        CAmount nFees = nValueIn-nValueOut;
+        CColorAmount mValueOut = tx.GetValueOut();
+        CColorAmount mFees = mValueIn-mValueOut;
         double dPriority = view.GetPriority(tx, chainActive.Height());
 
-        CTxMemPoolEntry entry(tx, nFees, GetTime(), dPriority, chainActive.Height(), mempool.HasNoInputsOf(tx));
+        CTxMemPoolEntry entry(tx, mFees, GetTime(), dPriority, chainActive.Height(), mempool.HasNoInputsOf(tx));
         unsigned int nSize = entry.GetTxSize();
 
         // Don't accept it if it can't get into a block
-        CAmount txMinFee = GetMinRelayFee(tx, nSize, true);
+        CColorAmount txMinFee = GetMinRelayFee(tx, nSize, true);
         // Let the coinbase transaction accepted to mempool
         if (!tx.IsCoinBase()) {
-            if (fLimitFree && nFees < txMinFee)
-                return state.DoS(0, error("AcceptToMemoryPool: not enough fees %s, %d < %d",
-                                            hash.ToString(), nFees, txMinFee),
+            if (fLimitFree && mFees < txMinFee)
+                return state.DoS(0, error("AcceptToMemoryPool: not enough fees %s, %s < %s",
+                                            hash.ToString(), FormatMoney(mFees), FormatMoney(txMinFee)),
                                             REJECT_INSUFFICIENTFEE, "insufficient fee");
         }
         // Check against previous transactions
