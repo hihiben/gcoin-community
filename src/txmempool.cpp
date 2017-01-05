@@ -20,15 +20,15 @@
 using namespace std;
 
 CTxMemPoolEntry::CTxMemPoolEntry():
-    nFee(0), nTxSize(0), nModSize(0), nTime(0), dPriority(0.0), hadNoDependencies(false)
+    mFee(CColorAmount(1, 0)), nTxSize(0), nModSize(0), nTime(0), dPriority(0.0), hadNoDependencies(false)
 {
     nHeight = MEMPOOL_HEIGHT;
 }
 
-CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CAmount& _nFee,
+CTxMemPoolEntry::CTxMemPoolEntry(const CTransaction& _tx, const CColorAmount& _mFee,
                                  int64_t _nTime, double _dPriority,
                                  unsigned int _nHeight, bool poolHasNoInputsOf):
-    tx(_tx), nFee(_nFee), nTime(_nTime), dPriority(_dPriority), nHeight(_nHeight),
+    tx(_tx), mFee(_mFee), nTime(_nTime), dPriority(_dPriority), nHeight(_nHeight),
     hadNoDependencies(poolHasNoInputsOf)
 {
     nTxSize = ::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION);
@@ -43,8 +43,8 @@ CTxMemPoolEntry::CTxMemPoolEntry(const CTxMemPoolEntry& other)
 double
 CTxMemPoolEntry::GetPriority(unsigned int currentHeight) const
 {
-    CAmount nValueIn = tx.GetValueOut()+nFee;
-    double deltaPriority = ((double)(currentHeight-nHeight)*nValueIn)/nModSize;
+    CColorAmount mValueIn = tx.GetValueOut()+mFee;
+    double deltaPriority = ((double)(currentHeight-nHeight)*mValueIn.TotalValue())/nModSize;
     double dResult = dPriority + deltaPriority;
     return dResult;
 }
