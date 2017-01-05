@@ -1012,12 +1012,13 @@ public:
             }
 
             BOOST_FOREACH(const CTxOut txout, tx.vout) {
-                if (!IsValidColor(txout.color)) {
+                type_Color color = txout.mValue.Color();
+                if (!IsValidColor(color)) {
                     return RejectInvalidTypeTx("color invalid", state, 100);
                 }
-                if (!plicense->IsColorExist(txout.color)) {
+                if (!plicense->IsColorExist(color)) {
                     return RejectInvalidTypeTx(
-                            strprintf("no license for color %u", txout.color),
+                            strprintf("no license for color %u", color),
                             state, 100);
                 }
             }
@@ -1030,7 +1031,8 @@ public:
     {
         if (!tx.IsCoinBase()) {
             BOOST_FOREACH(const CTxOut txout, tx.vout) {
-                if (!IsValidColor(txout.color)) {
+                type_Color color = txout.mValue.Color();
+                if (!IsValidColor(color)) {
                     return RejectInvalidTypeTx("color invalid", state, 100);
                 }
             }
@@ -1051,10 +1053,11 @@ public:
     {
         // First check if minter is alliance or not. Alliance can MINT color 0 without License
         string addr = GetTxOutputAddr(tx, 0);
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR) {
-            if (!plicense->IsColorOwner(tx.vout[0].color, addr)) {
+        type_Color color = tx.vout[0].mValue.Color();
+        if (color != DEFAULT_ADMIN_COLOR) {
+            if (!plicense->IsColorOwner(color, addr)) {
                 return RejectInvalidTypeTx(
-                        strprintf("mint color=%u without license", tx.vout[0].color),
+                        strprintf("mint color=%u without license", color),
                         state, 100);
             }
         } else if (addr != ConsensusAddressForLicense && addr != ConsensusAddressForMiner) {
@@ -1068,25 +1071,27 @@ public:
                     const CBlock *pblock)
     {
         assert(tx.vout.size() > 0);
-        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
-            if (tx.vout[0].nValue != COIN) {
+        type_Color color = tx.vout[0].mValue.Color();
+        CAmount value = tx.vout[0].mValue.Value();
+        if (color == DEFAULT_ADMIN_COLOR) {
+            if (value != COIN) {
                 return RejectInvalidTypeTx(
                         "value of color 0 must be 1 COINS", state, 100);
             }
         }
 
         // check if total value of this color meet MAX_MONEY
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR) {
-            if (tx.vout[0].nValue > MAX_MONEY) {
+        if (color != DEFAULT_ADMIN_COLOR) {
+            if (value > MAX_MONEY) {
                 return RejectInvalidTypeTx(
                         "value bigger than MAX_MONEY", state, 100);
             }
-            int64_t num_of_coins = plicense->NumOfCoins(tx.vout[0].color);
-            if (tx.vout[0].nValue > (MAX_MONEY - num_of_coins)) {
+            int64_t num_of_coins = plicense->NumOfCoins(color);
+            if (value > (MAX_MONEY - num_of_coins)) {
                 string error_msg = strprintf(
-                        "new mint value(%d) + total exist value(%d) "
+                        "new mint value(%s) + total exist value(%d) "
                         "> MAX_MONEY(%d)",
-                        tx.vout[0].nValue, num_of_coins, MAX_MONEY);
+                        FormatMoney(tx.vout[0].mValue), num_of_coins, MAX_MONEY);
                 return RejectInvalidTypeTx(error_msg, state, 100);
             }
         }
@@ -1099,25 +1104,29 @@ public:
 
     bool Apply(const CTransaction &tx, const CBlock *pblock)
     {
+        type_Color color = tx.vout[0].mValue.Color();
+        CAmount value = tx.vout[0].mValue.Value();
         assert(tx.vout.size() > 0);
-        if (!plicense->IsColorExist(tx.vout[0].color))
-            return error("%s() : no license for color %u", __func__, tx.vout[0].color);
+        if (!plicense->IsColorExist(color))
+            return error("%s() : no license for color %u", __func__, color);
         // Record the coin amount.
-        plicense->AddNumOfCoins(tx.vout[0].color, tx.vout[0].nValue);
+        plicense->AddNumOfCoins(color, value);
         return true;
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
+        type_Color color = tx.vout[0].mValue.Color();
+        CAmount value = tx.vout[0].mValue.Value();
         assert(tx.vout.size() > 0);
-        if (tx.vout[0].color == DEFAULT_ADMIN_COLOR) {
+        if (color == DEFAULT_ADMIN_COLOR) {
             return true;
         }
-        if (!plicense->IsColorExist(tx.vout[0].color)) {
-            LogPrintf("%s() fail : no license for color %u", __func__, tx.vout[0].color);
+        if (!plicense->IsColorExist(color)) {
+            LogPrintf("%s() fail : no license for color %u", __func__, color);
             return false;
         }
-        plicense->AddNumOfCoins(tx.vout[0].color, -tx.vout[0].nValue);
+        plicense->AddNumOfCoins(color, -value);
         return true;
     }
 };
@@ -1134,9 +1143,10 @@ public:
     bool CheckValid(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
+        type_Color color = tx.vout[0].mValue.Color();
         DetachInfo();
         // we check when reconstruct list at if VerifyDB
-        if (!IsValidColor(tx.vout[0].color))
+        if (!IsValidColor(color))
             return RejectInvalidTypeTx("color invalid", state, 100);
 
         // only alliance can change license's color
@@ -1149,23 +1159,23 @@ public:
                     std::string(BAD_TXNS_TYPE_) + "not-exist");
         }
 
-        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+        type_Color colorIn = txinfo.GetTxOutValueOfIndex(txin.prevout.n).Color();
         string addr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
 
         // Requires the admin color coin as input to create a new license.
-        if (color != tx.vout[0].color) {
-            if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) || addr != ConsensusAddressForLicense) {
+        if (colorIn != color) {
+            if (!(txinfo.GetTxType() == MINT && colorIn == DEFAULT_ADMIN_COLOR) || addr != ConsensusAddressForLicense) {
                 return RejectInvalidTypeTx(
                         "change color invalid", state, 100);
             }
         }
 
         // check if license of this color is used
-        if (plicense->HasColorOwner(tx.vout[0].color)) {
+        if (plicense->HasColorOwner(color)) {
             if (tx.vout.size() == 1) {
                 // license owner's address must equal to input address for license
                 // transfer case
-                if (!plicense->IsColorOwner(tx.vout[0].color, addr))
+                if (!plicense->IsColorOwner(color, addr))
                     return RejectInvalidTypeTx(
                             "Transferring license from non-owner", state, 100);
             } else if (tx.vout.size() == 2){
@@ -1194,15 +1204,15 @@ public:
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        if (!IsValidColor(tx.vout[0].color))
+        if (!IsValidColor(tx.vout[0].mValue.Color()))
             return RejectInvalidTypeTx("color invalid", state, 100);
 
         if (tx.vout.size() > 0)
-            if (tx.vout[0].nValue != COIN)
-                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
+            if (tx.vout[0].mValue.Value() != COIN)
+                return RejectInvalidTypeTx("out[0].mValue.Value() != COIN", state, 100);
         if (tx.vout.size() > 1)
-            if (tx.vout[1].nValue != 0)
-                return RejectInvalidTypeTx("out[1].nValue != 0", state, 100);
+            if (tx.vout[1].mValue.Value() != 0)
+                return RejectInvalidTypeTx("out[1].mValue.Value() != 0", state, 100);
         if (tx.vout.size() > 2)
             return RejectInvalidTypeTx("size of output too large", state, 100);
 
@@ -1223,16 +1233,17 @@ public:
         }
         string receiverAddr = GetTxOutputAddr(tx, 0);
 
-        return plicense->SetOwner(tx.vout[0].color, receiverAddr, pinfo);
+        return plicense->SetOwner(tx.vout[0].mValue.Color(), receiverAddr, pinfo);
     }
 
     bool Undo(const CTransaction &tx, const CBlock *pblock)
     {
+        type_Color color = tx.vout[0].mValue.Color();
         DetachInfo();
         assert(tx.vin.size() > 0);
         // erase this license if input was sent by alliance (from mint type tx)
-        if (!plicense->IsColorExist(tx.vout[0].color)) {
-            LogPrintf("%s() fail : no license for color %u\n", __func__, tx.vout[0].color);
+        if (!plicense->IsColorExist(color)) {
+            LogPrintf("%s() fail : no license for color %u\n", __func__, color);
             return false;
         }
 
@@ -1241,16 +1252,16 @@ public:
         if (!txinfo.init(txin.prevout, pblock, true)) {
             return error("%s() : %s Fetch input fail\n", __func__, tx.GetHash().ToString());
         }
-        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+        type_Color colorIn = txinfo.GetTxOutValueOfIndex(txin.prevout.n).Color();
 
-        if (color == DEFAULT_ADMIN_COLOR) {
-            plicense->RemoveColor(tx.vout[0].color);
+        if (colorIn == DEFAULT_ADMIN_COLOR) {
+            plicense->RemoveColor(color);
         } else {
             // case license transfer
             string pre_owner = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             if (pre_owner == "")
                 return error("%s() : %s can't fetch address of pre tx\n", __func__, tx.GetHash().ToString());
-            if (!plicense->SetOwner(tx.vout[0].color, pre_owner))
+            if (!plicense->SetOwner(color, pre_owner))
                 return error("%s() : %s set owner failed\n", __func__, tx.GetHash().ToString());
         }
         return true;
@@ -1259,9 +1270,9 @@ public:
     bool CheckNotRepeated(const CTransaction &tx, const CTransaction &pool_tx,
                           CValidationState &state)
     {
-        if (pool_tx.vout[0].color == tx.vout[0].color)
+        if (pool_tx.vout[0].mValue.Color() == tx.vout[0].mValue.Color())
             return RejectInvalidTypeTx(
-                    strprintf("color %u used : in memory conflict", tx.vout[0].color),
+                    strprintf("color %u used : in memory conflict", tx.vout[0].mValue.Color()),
                     state, 50);
         return true;
     }
@@ -1318,14 +1329,14 @@ public:
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
+        if (tx.vout[0].mValue.Color() != DEFAULT_ADMIN_COLOR)
             return RejectInvalidTypeTx("color must be 0", state, 100);
 
         // for vote type tx, output size must be 1 and
-        // vout[0].nValue must be 1
+        // vout[0].mValue.Value() must be 1
         if (tx.vout.size() == 1) {
-            if (tx.vout[0].nValue != COIN)
-                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
+            if (tx.vout[0].mValue.Value() != COIN)
+                return RejectInvalidTypeTx("out[0].mValue.Value() != COIN", state, 100);
         } else {
             return RejectInvalidTypeTx("size of output != 1", state, 100);
         }
@@ -1429,7 +1440,7 @@ public:
                         state, 10,
                         std::string(BAD_TXNS_TYPE_) + "not-exist");
             }
-            type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+            type_Color color = txinfo.GetTxOutValueOfIndex(txin.prevout.n).Color();
             string addr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) || addr != ConsensusAddressForMiner) {
                 return RejectInvalidTypeTx(
@@ -1442,14 +1453,14 @@ public:
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
+        if (tx.vout[0].mValue.Color() != DEFAULT_ADMIN_COLOR)
             return RejectInvalidTypeTx("color must be 0", state, 100);
 
         // for miner type tx, output size must be 1 and
-        // vout[0].nValue must be 1
+        // vout[0].mValue.Value() must be 1
         if (tx.vout.size() == 1) {
-            if (tx.vout[0].nValue != COIN)
-                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
+            if (tx.vout[0].mValue.Value() != COIN)
+                return RejectInvalidTypeTx("out[0].mValue.Value() != COIN", state, 100);
         } else {
             return RejectInvalidTypeTx("size of output != 1", state, 100);
         }
@@ -1517,7 +1528,7 @@ public:
                         state, 10,
                         std::string(BAD_TXNS_TYPE_) + "not-exist");
             }
-            type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
+            type_Color color = txinfo.GetTxOutValueOfIndex(txin.prevout.n).Color();
             string addr = txinfo.GetTxOutAddressOfIndex(txin.prevout.n);
             if (!(txinfo.GetTxType() == MINT && color == DEFAULT_ADMIN_COLOR) || addr != ConsensusAddressForMiner) {
                 return RejectInvalidTypeTx(
@@ -1530,14 +1541,14 @@ public:
     bool CheckFormat(const CTransaction &tx, CValidationState &state,
                     const CBlock *pblock)
     {
-        if (tx.vout[0].color != DEFAULT_ADMIN_COLOR)
+        if (tx.vout[0].mValue.Color() != DEFAULT_ADMIN_COLOR)
             return RejectInvalidTypeTx("color must be 0", state, 100);
 
         // for ban-vote type tx, output size must be 1 and
-        // vout[0].nValue must be 1
+        // vout[0].mValue.Value() must be 1
         if (tx.vout.size() == 1) {
-            if (tx.vout[0].nValue != COIN)
-                return RejectInvalidTypeTx("out[0].nValue != COIN", state, 100);
+            if (tx.vout[0].mValue.Value() != COIN)
+                return RejectInvalidTypeTx("out[0].mValue.Value != COIN", state, 100);
         } else {
             return RejectInvalidTypeTx("size of output != 1", state, 100);
         }
