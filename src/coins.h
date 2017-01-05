@@ -334,9 +334,9 @@ struct CCoinsStats
     uint64_t nTransactionOutputs;
     uint64_t nSerializedSize;
     uint256 hashSerialized;
-    colorAmount_t mapTotalAmount;
+    CColorAmount mTotalAmount;
 
-    CCoinsStats() : nHeight(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0) {}
+    CCoinsStats() : nHeight(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0), mTotalAmount(CColorAmount()) {}
 };
 
 
