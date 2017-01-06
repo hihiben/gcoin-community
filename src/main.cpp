@@ -2538,8 +2538,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
             // This is also true for mempool checks.
             CBlockIndex *pindexPrev = mapBlockIndex.find(inputs.GetBestBlock())->second;
             int nSpendHeight = pindexPrev->nHeight + 1;
-            CAmount nValueIn = 0;
-            colorAmount_t nValueIn_;
+            CColorAmount mValueIn;
             for (unsigned int i = 0; i < tx.vin.size(); i++)
             {
                 const COutPoint &prevout = tx.vin[i].prevout;
@@ -2556,26 +2555,20 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
 
                 // Check for negative or overflow input values
                 // FIXME: what if prevout.n >= coins->vout.size()?
-                nValueIn += coins->vout[prevout.n].nValue;
+                mValueIn += coins->vout[prevout.n].mValue;
 
-                type_Color color = coins->vout[prevout.n].color;
-                if (nValueIn_.find(color) != nValueIn_.end()) {
-                    nValueIn_[color] += coins->vout[prevout.n].nValue;
-                } else {
-                    nValueIn_[color] = coins->vout[prevout.n].nValue;
-                }
-                if (!MoneyRange(coins->vout[prevout.n].nValue) || !MoneyRange(nValueIn_[color]))
+                if (!MoneyRange(coins->vout[prevout.n].mValue.Value()) || !MoneyRange(mValueIn[coins->vout[prevout.n].mValue.Color()]))
                     return state.DoS(100, error("CheckInputs(): txin values out of range"),
                                      REJECT_INVALID, "bad-txns-inputvalues-outofrange");
             }
-            if (nValueIn < tx.GetValueOut())
+            if (mValueIn < tx.GetValueOut())
                 return state.DoS(100, error("%s() : %s value in < value out", __func__, tx.GetHash().ToString()),
                                  REJECT_INVALID, "bad-txns-in-belowout");
 
             // Tally transaction fees
-            int64_t nTxFee = nValueIn - tx.GetValueOut();
-            if (nTxFee < 0)
-                return state.DoS(100, error("%s() : %s nTxFee < 0", __func__, tx.GetHash().ToString()),
+            CColorAmount mTxFee = mValueIn - tx.GetValueOut();
+            if (mTxFee.TotalValue() < 0)
+                return state.DoS(100, error("%s() : %s mTxFee < 0", __func__, tx.GetHash().ToString()),
                                  REJECT_INVALID, "bad-txns-fee-negative");
 
         }
@@ -2622,7 +2615,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                         return state.DoS(100,false, REJECT_INVALID, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(check.GetScriptError())));
                     }
                 }
-            } else if (tx.vout[0].color != DEFAULT_ADMIN_COLOR) {
+            } else if (tx.vout[0].mValue.Color() != DEFAULT_ADMIN_COLOR) {
                 //similiar to above, but coinbase tx has no input so we should adjust it
 
                 // FIXME: what if tx.vin.size() and tx.vout.size() == 0?
