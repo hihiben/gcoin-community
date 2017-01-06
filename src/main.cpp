@@ -110,7 +110,7 @@ void EraseOrphansFor(NodeId peer);
 static bool IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned nRequired, const Consensus::Params& consensusParams);
 static void CheckBlockIndex();
 
-Fee TxFee(FEE_COLOR, FEE_VALUE);
+Fee TxFee(CColorAmount(FEE_COLOR, FEE_VALUE));
 // Constant stuff for coinbase transactions we create:
 CScript COINBASE_FLAGS;
 
