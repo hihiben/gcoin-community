@@ -305,9 +305,7 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn, CWallet *pwallet, 
                     if (!txinfo.init(txin.prevout)) {
                         throw std::runtime_error("CreateNewBlock() : fetch input failed");
                     }
-
-                    if (txinfo.GetTxOutColorOfIndex(txin.prevout.n) == TxFee.GetColor())
-                        totalfee += txinfo.GetTxOutValueOfIndex(txin.prevout.n);
+                    totalfee += txinfo.GetTxOutValueOfIndex(txin.prevout.n);
                 }
 
                 BOOST_FOREACH(const CTxOut& txout, tx.vout) {
