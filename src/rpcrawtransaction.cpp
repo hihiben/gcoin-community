@@ -19,6 +19,7 @@
 #include "script/sign.h"
 #include "script/standard.h"
 #include "uint256.h"
+#include "utilmoneystr.h"
 #ifdef ENABLE_WALLET
 #include "wallet/wallet.h"
 #endif
@@ -716,7 +717,7 @@ Value signrawtransaction(const Array& params, bool fHelp)
                 if ((unsigned int)nOut >= coins->vout.size())
                     coins->vout.resize(nOut+1);
                 coins->vout[nOut].scriptPubKey = scriptPubKey;
-                coins->vout[nOut].nValue = 0; // we don't know the actual output value
+                coins->vout[nOut].mValue = CColorAmount(0, 0); // we don't know the actual output value
             }
 
             // if redeemScript given and not using the local wallet (private keys
