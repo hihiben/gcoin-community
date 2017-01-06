@@ -1813,41 +1813,22 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
 
     // fee = vin - vout
-    colorAmount_t Input;
+    CColorAmount Input;
     BOOST_FOREACH(const CTxIn txin, tx.vin) {
         TxInfo txinfo;
         if (!txinfo.init(txin.prevout, pblock)) {
             LogPrintf("%s : Fetch inputs fail\n", __func__);
             return false;
         }
-        type_Color color = txinfo.GetTxOutColorOfIndex(txin.prevout.n);
-        int64_t value = txinfo.GetTxOutValueOfIndex(txin.prevout.n);
-        colorAmount_t::iterator it = Input.find(color);
-        if (it == Input.end()) {
-            Input.insert(make_pair(color, value));
-        } else {
-            it->second += value;
-        }
+        CColorAmount mValue = txinfo.GetTxOutValueOfIndex(txin.prevout.n);
+        Input += mValue;
     }
-    unsigned int index = 0;
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
-        type_Color color = txout.color;
-        colorAmount_t::iterator it = Input.find(color);
-        if (it == Input.end()) {
-            LogPrintf("%s : Cannot find match input color\n", __func__);
-            return false;
-        }
-        it->second -= txout.nValue;
-        if (it->second == 0) {
-            Input.erase(it);
-            index++;
-            continue;
-        }
-        if (it->second < 0) {
+        Input -= txout.mValue;
+        if (!Input.IsPos()) {
             LogPrintf("%s : Value of output > value of input\n", __func__);
             return false;
         }
-        index++;
     }
     // not every type of tx need fee
     unsigned int nValidSize = fCheckFee? 1: 0;
@@ -1856,8 +1837,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
         return false;
     }
     if (fCheckFee) {
-        colorAmount_t::iterator it = Input.begin();
-        if (!TxFee.CheckFee(it->first, it->second)) {
+        if (!TxFee.CheckFee(Input)) {
             LogPrintf("%s : Incorrect fee\n", __func__);
             return false;
         }
