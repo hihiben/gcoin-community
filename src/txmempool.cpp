@@ -208,7 +208,7 @@ void CTxMemPool::removeColorConflicts(const CTransaction &tx, std::list<CTransac
         BOOST_FOREACH(const PAIRTYPE(uint256, CTxMemPoolEntry)& entry, mempool.mapTx) {
             const CTransaction& m_tx = entry.second.GetTx();
             if (m_tx.type != LICENSE) continue;
-            if (m_tx.vout[0].color == txout.color) {
+            if (m_tx.vout[0].mValue.Color() == txout.mValue.Color()) {
                 const CTransaction &txConflict = m_tx;
                 remove(txConflict, removed, true);
             }
