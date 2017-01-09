@@ -510,27 +510,30 @@ static void SendLicense(const CTxDestination& address, const type_Color& color, 
     CReserveKey reservekey(pwalletMain);
     std::string strError;
     vector<CRecipient> vecSend;
-    CRecipient recipient = {scriptPubKey, COIN, false};
+    CRecipient recipient = {scriptPubKey, CColorAmount(color, COIN), false};
     vecSend.push_back(recipient);
     bool fComplete = true;
-    if (!pwalletMain->CreateLicenseTransaction(vecSend, color, wtxNew, strError, fComplete)) {
+    if (!pwalletMain->CreateLicenseTransaction(vecSend, wtxNew, strError, fComplete)) {
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The license transaction was rejected! Please read debug.info.");
 }
 
-static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDestination& address, CAmount nValue, const type_Color& color, bool fSubtractFeeFromAmount, CWalletTx& wtxNew, const string& feeFromAddress = "")
+static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDestination& address, CColorAmount mValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew, const string& feeFromAddress = "")
 {
-    CAmount curBalance = pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color);
-
     // Check amount
-    if (nValue <= 0)
+    if (mValue.size() > 1)
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid amount size");
+    if (mValue.TotalValue() <= 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid amount");
+
+    type_Color color = mValue.Color();
     if (!IsValidColor(color))
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid color");
 
-    if (nValue > curBalance)
+    CAmount curBalance = pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color);
+    if (mValue.Value() > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds from this address");
 
     // Parse Gcoin address
@@ -538,32 +541,33 @@ static void SendMoneyFromFixedAddress(const string& strFromAddress, const CTxDes
 
     // Create and send the transaction
     CReserveKey reservekey(pwalletMain);
-    CAmount nFeeRequired;
+    CColorAmount mFeeRequired;
     std::string strError;
     vector<CRecipient> vecSend;
     int nChangePosRet = -1;
-    CRecipient recipient = {scriptPubKey, nValue, fSubtractFeeFromAmount};
+    CRecipient recipient = {scriptPubKey, mValue, fSubtractFeeFromAmount};
     vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTransaction(vecSend, color, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError, NULL, strFromAddress, feeFromAddress)) {
-        if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetColorBalanceFromFixedAddress(strFromAddress, color))
-            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, mFeeRequired, nChangePosRet, strError, NULL, strFromAddress, feeFromAddress)) {
+        if (!fSubtractFeeFromAmount && mValue.Value() + mFeeRequired.Value() > curBalance)
+            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(mFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
         throw JSONRPCError(RPC_WALLET_ERROR, "Error: The transaction was rejected! Please read debug.info.");
 }
 
-static void SendMoney(const CTxDestination& address, CAmount nValue, const type_Color& color, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
+static void SendMoney(const CTxDestination& address, CColorAmount mValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew)
 {
+    type_Color color = mValue.Color();
     CAmount curBalance = pwalletMain->GetColorBalance(color);
 
     // Check amount
-    if (nValue <= 0)
+    if (mValue.Value() <= 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid amount");
-    if (!IsValidColor(color))
+    if (!IsValidColor(mValue.Color()))
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid color");
 
-    if (nValue > curBalance)
+    if (mValue.Value() > curBalance)
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Insufficient funds");
 
     // Parse Gcoin address
@@ -571,15 +575,15 @@ static void SendMoney(const CTxDestination& address, CAmount nValue, const type_
 
     // Create and send the transaction
     CReserveKey reservekey(pwalletMain);
-    CAmount nFeeRequired;
+    CColorAmount mFeeRequired;
     std::string strError;
     vector<CRecipient> vecSend;
     int nChangePosRet = -1;
-    CRecipient recipient = {scriptPubKey, nValue, fSubtractFeeFromAmount};
+    CRecipient recipient = {scriptPubKey, mValue, fSubtractFeeFromAmount};
     vecSend.push_back(recipient);
-    if (!pwalletMain->CreateTransaction(vecSend, color, wtxNew, reservekey, nFeeRequired, nChangePosRet, strError)) {
-        if (!fSubtractFeeFromAmount && nValue + nFeeRequired > pwalletMain->GetColorBalance(color))
-            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(nFeeRequired));
+    if (!pwalletMain->CreateTransaction(vecSend, wtxNew, reservekey, mFeeRequired, nChangePosRet, strError)) {
+        if (!fSubtractFeeFromAmount && mValue.Value() + mFeeRequired.Value() > pwalletMain->GetColorBalance(color))
+            strError = strprintf("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds!", FormatMoney(mFeeRequired));
         throw JSONRPCError(RPC_WALLET_ERROR, strError);
     }
     if (!pwalletMain->CommitTransaction(wtxNew, reservekey))
