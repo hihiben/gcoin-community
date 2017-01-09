@@ -1643,7 +1643,7 @@ static void ApproximateBestSubset(vector<pair<CColorAmount, pair<const CWalletTx
 
     for (int nRep = 0; nRep < iterations && mBest != mTargetValue; nRep++) {
         vfIncluded.assign(vValue.size(), false);
-        CColorAmount mTotal = 0;
+        CColorAmount mTotal;
         bool fReachedTarget = false;
         for (int nPass = 0; nPass < 2 && !fReachedTarget; nPass++) {
             for (unsigned int i = 0; i < vValue.size(); i++) {
