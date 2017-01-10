@@ -214,11 +214,11 @@ public:
     CCoinsViewCache_UnitTest(CCoinsView *baseIn): CCoinsViewCache(baseIn), hash(ArithToUint256(arith_uint256(0))), txout()
     {
     }
-    inline void setUTXO(const uint256& hashIn, unsigned int indexIn, CAmount amount, CScript scriptPubKeyIn, type_Color color)
+    inline void setUTXO(const uint256& hashIn, unsigned int indexIn, CColorAmount mAmount, CScript scriptPubKeyIn)
     {
         hash = hashIn;
         index = indexIn;
-        txout = CTxOut(amount, scriptPubKeyIn, color);
+        txout = CTxOut(mAmount, scriptPubKeyIn);
     }
     bool GetAddrCoins(const std::string &addr, CTxOutMap &mapTxOut, bool fLicense) const
     {
