@@ -1247,7 +1247,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
 
     return ValueFromAmount(mAmount);
 }
-colorAmount_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
+CColorAmount GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, CColorAmount& mAmount)
 {
     // Tally wallet transactions
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
@@ -1255,30 +1255,22 @@ colorAmount_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, i
         if (!CheckFinalTx(wtx) || wtx.GetBlocksToMaturity() > 0 || wtx.GetDepthInMainChain() < 0)
             continue;
 
-        colorAmount_t nReceived, nSent;
-        wtx.GetAccountAmounts(strAccount, nReceived, nSent, filter);
+        CColorAmount mReceived, mSent;
+        wtx.GetAccountAmounts(strAccount, mReceived, mSent, filter);
 
-        if (nReceived.size() != 0 && wtx.GetDepthInMainChain() >= nMinDepth) {
-            for (colorAmount_t::const_iterator it = nReceived.begin(); it != nReceived.end(); it++) {
-                if (color_amount.count(it->first) == 0)
-                    color_amount[it->first] = 0;
-                color_amount[it->first] += it->second;
-            }
-        }
-        for (colorAmount_t::const_iterator it = nSent.begin(); it != nSent.end(); it++) {
-            if (color_amount.count(it->first) != 0)
-                color_amount[it->first] -= it->second;
-        }
+        if (mReceived.size() != 0 && wtx.GetDepthInMainChain() >= nMinDepth)
+            mAmount += mReceived;
+        mAmount -= mSent;
     }
 
     // Tally internal accounting entries
     return walletdb.GetAccountCreditDebit(strAccount);
 }
 
-colorAmount_t GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
+CColorAmount GetAccountBalance(const string& strAccount, int nMinDepth, const isminefilter& filter, CColorAmount& mAmount)
 {
     CWalletDB walletdb(pwalletMain->strWalletFile);
-    return GetAccountBalance(walletdb, strAccount, nMinDepth, filter, color_amount);
+    return GetAccountBalance(walletdb, strAccount, nMinDepth, filter, mAmount);
 }
 
 CAmount GetAccountColorBalance(CWalletDB& walletdb, const string& strAccount, const type_Color& color, int nMinDepth, const isminefilter& filter)
@@ -1345,11 +1337,11 @@ Value getbalance(const Array& params, bool fHelp)
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
-    colorAmount_t color_amount;
+    CColorAmount mAmount;
 
     if (params.size() == 0) {
-        pwalletMain->GetBalance(color_amount);
-        return ValueFromAmount(color_amount);
+        pwalletMain->GetBalance(mAmount);
+        return ValueFromAmount(mAmount);
     }
 
     int nMinDepth = 1;
@@ -1369,41 +1361,30 @@ Value getbalance(const Array& params, bool fHelp)
             if (!CheckFinalTx(wtx) || wtx.GetBlocksToMaturity() > 0 || wtx.GetDepthInMainChain() < 0)
                 continue;
 
-            CAmount allFee;
+            CColorAmount allFee;
             string strSentAccount;
             list<COutputEntry> listReceived;
             list<COutputEntry> listSent;
             wtx.GetAmounts(listReceived, listSent, allFee, strSentAccount, filter);
             if (wtx.GetDepthInMainChain() >= nMinDepth) {
                 BOOST_FOREACH(const COutputEntry& r, listReceived) {
-                    if (color_amount.count(r.color) == 0)
-                        color_amount[r.color] = 0;
-
-                    color_amount[r.color] += r.amount;
+                    mAmount += r.mAmount;
                 }
             }
             BOOST_FOREACH(const COutputEntry& s, listSent) {
-                if (color_amount.count(s.color) == 0) // This should not happen.
-                    color_amount[s.color] = 0;
-
-                color_amount[s.color] -= s.amount;
+                mAmount -= s.mAmount;
             }
-            /*
-            if (color_amount.count(wtx.color) == 0) // This should not happen.
-                color_amount[wtx.color] = 0;
-            */
-
-            //color_amount[wtx.color] -= allFee;
+            //mAmount -= allFee;
         }
 
-        return ValueFromAmount(color_amount);
+        return ValueFromAmount(mAmount);
     }
 
     string strAccount = AccountFromValue(params[0]);
 
-    GetAccountBalance(strAccount, nMinDepth, filter, color_amount);
+    GetAccountBalance(strAccount, nMinDepth, filter, mAmount);
 
-    return ValueFromAmount(color_amount);
+    return ValueFromAmount(mAmount);
 }
 
 Value getcolorbalance(const Array& params, bool fHelp)
