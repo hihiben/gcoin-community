@@ -1018,7 +1018,7 @@ Value sendtoaddress(const Array& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    SendMoney(address.Get(), nAmount, color, fSubtractFeeFromAmount, wtx);
+    SendMoney(address.Get(), CColorAmount(color, nAmount), fSubtractFeeFromAmount, wtx);
 
     return wtx.GetHash().GetHex();
 }
@@ -1054,7 +1054,7 @@ Value listaddressgroupings(const Array& params, bool fHelp)
     LOCK2(cs_main, pwalletMain->cs_wallet);
 
     Array jsonGroupings;
-    map<CTxDestination, colorAmount_t > balances = pwalletMain->GetAddressBalances();
+    map<CTxDestination, CColorAmount> balances = pwalletMain->GetAddressBalances();
     BOOST_FOREACH(set<CTxDestination> grouping, pwalletMain->GetAddressGroupings()) {
         Array jsonGrouping;
         BOOST_FOREACH(CTxDestination address, grouping) {
@@ -1173,7 +1173,7 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
         nMinDepth = params[1].get_int();
 
     // Tally
-    colorAmount_t colorAmount;
+    CColorAmount mAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1182,13 +1182,11 @@ Value getreceivedbyaddress(const Array& params, bool fHelp)
         BOOST_FOREACH(const CTxOut& txout, wtx.vout)
             if (txout.scriptPubKey == scriptPubKey)
                 if (wtx.GetDepthInMainChain() >= nMinDepth) {
-                    if (!colorAmount.count(txout.color))
-                        colorAmount[txout.color] = 0;
-                    colorAmount[txout.color] += txout.nValue;
+                    mAmount += txout.mValue;
                 }
     }
 
-    return ValueFromAmount(colorAmount);
+    return ValueFromAmount(mAmount);
 }
 
 
@@ -1232,7 +1230,7 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
     set<CTxDestination> setAddress = pwalletMain->GetAccountAddresses(strAccount);
 
     // Tally
-    colorAmount_t colorAmount;
+    CColorAmount mAmount;
     for (map<uint256, CWalletTx>::iterator it = pwalletMain->mapWallet.begin(); it != pwalletMain->mapWallet.end(); ++it) {
         const CWalletTx& wtx = (*it).second;
         if (wtx.IsCoinBase() || !CheckFinalTx(wtx))
@@ -1242,14 +1240,12 @@ Value getreceivedbyaccount(const Array& params, bool fHelp)
             CTxDestination address;
             if (ExtractDestination(txout.scriptPubKey, address) && IsMine(*pwalletMain, address) && setAddress.count(address))
                 if (wtx.GetDepthInMainChain() >= nMinDepth) {
-                    if (!colorAmount.count(txout.color))
-                        colorAmount[txout.color] = 0;
-                    colorAmount[txout.color] += txout.nValue;
+                    mAmount += txout.mValue;
                 }
         }
     }
 
-    return ValueFromAmount(colorAmount);
+    return ValueFromAmount(mAmount);
 }
 colorAmount_t GetAccountBalance(CWalletDB& walletdb, const string& strAccount, int nMinDepth, const isminefilter& filter, colorAmount_t& color_amount)
 {
