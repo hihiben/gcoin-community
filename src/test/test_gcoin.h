@@ -49,9 +49,8 @@ void CreateTransaction(
 
 void ConnectTransactions(const uint256 &src_hash,
         const uint256 &dst_hash,
-        int64_t value,
+        CColorAmount mValue,
         const std::string &address,
-        const type_Color &color,
         const std::string &misc = "");
 
 std::string CreateAddress();
