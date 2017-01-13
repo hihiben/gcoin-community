@@ -863,7 +863,7 @@ class CAccountingEntry
 {
 public:
     std::string strAccount;
-    colorAmount_t nCreditDebit;
+    CColorAmount mCreditDebit;
     int64_t nTime;
     std::string strOtherAccount;
     std::string strComment;
@@ -900,9 +900,10 @@ public:
             WriteOrderPos(nOrderPos, mapValue);
 
             if (!(mapValue.empty() && _ssExtra.empty())) {
+                colorAmount_t mTemp = mCreditDebit;
                 CDataStream ss(nType, nVersion);
                 ss.insert(ss.begin(), '\0');
-                ss << nCreditDebit;
+                ss << mTemp;
                 ss << mapValue;
                 ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
                 strComment.append(ss.str());
@@ -916,7 +917,9 @@ public:
             mapValue.clear();
             if (std::string::npos != nSepPos) {
                 CDataStream ss(std::vector<char>(strComment.begin() + nSepPos + 1, strComment.end()), nType, nVersion);
-                ss >> nCreditDebit;
+                colorAmount_t mTemp;
+                ss >> mTemp;
+                mCreditDebit = mTemp;
                 ss >> mapValue;
                 _ssExtra = std::vector<char>(ss.begin(), ss.end());
             }
