@@ -2004,7 +2004,7 @@ Value addmultisigaddress(const Array& params, bool fHelp)
 
 struct tallyitem
 {
-    colorAmount_t colorAmount;
+    CColorAmount mAmount;
     int nConf;
     vector<uint256> txids;
     bool fIsWatchonly;
