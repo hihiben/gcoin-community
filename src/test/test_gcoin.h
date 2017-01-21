@@ -164,10 +164,9 @@ public:
         return license_amount_;
     }
 
-    bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, const type_Color& send_color, CWalletTx& wtxNew,
-                                  string& strFailReason, bool &fComplete)
+    bool CreateLicenseTransaction(const std::vector<CRecipient>& vecSend, CWalletTx& wtxNew, string& strFailReason, bool &fComplete)
     {
-        return (send_color == color_ );
+        return (vecSend[0].mAmount.Color() == color_ );
     }
 
     inline bool CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey)
