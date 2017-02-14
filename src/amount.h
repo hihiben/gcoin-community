@@ -52,76 +52,6 @@ public:
         return ret;
     }
 
-    CColorAmount operator+(const CColorAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        for (CColorAmount::const_iterator it(rhs.begin()); it != rhs.end(); it++) {
-            std::pair<CColorAmount::iterator, bool> ret;
-            ret = lhs.insert(*it);
-            if (!ret.second)
-                ret.first->second += it->second;
-        }
-        return lhs;
-    }
-
-    CColorAmount operator+(const CAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        if (lhs.size() == 1)
-            lhs.begin()->second += rhs;
-        return lhs;
-    }
-
-    CColorAmount operator-(const CColorAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        for (CColorAmount::const_iterator it(rhs.begin()); it != rhs.end(); it++) {
-            if (!lhs.count(it->first))
-                lhs[it->first] -= it->second;
-            else
-                lhs[it->first] = -it->second;
-            if (lhs[it->first] == 0)
-                lhs.erase(it->first);
-        }
-        return lhs;
-    }
-
-    CColorAmount operator-(const CAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        if (lhs.size() == 1) {
-            lhs.begin()->second -= rhs;
-            if (lhs[0] == 0)
-                lhs.clear();
-        }
-        else
-            return lhs;
-    }
-
-    CColorAmount operator*(const CAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        for (CColorAmount::iterator it(lhs.begin()); it != lhs.end(); it++)
-            it->second *= rhs;
-        return lhs;
-    }
-
-    CColorAmount operator/(const CAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        for (CColorAmount::iterator it(lhs.begin()); it != lhs.end(); it++)
-            it->second /= rhs;
-        return lhs;
-    }
-
-    CColorAmount operator%(const CAmount& rhs) const
-    {
-        CColorAmount lhs = (*this);
-        for (CColorAmount::iterator it(lhs.begin()); it != lhs.end(); it++)
-            it->second %= rhs;
-        return lhs;
-    }
-
     bool operator>(const CColorAmount& rhs) const
     {
         CColorAmount lhs = (*this);
@@ -210,7 +140,7 @@ public:
         return *this;
     }
 
-    CColorAmount& operator+=(const CColorAmount& rhs)
+    CColorAmount& operator+=(const CColorAmount &rhs)
     {
         for (CColorAmount::const_iterator it(rhs.begin()); it != rhs.end(); it++) {
             std::pair<CColorAmount::iterator, bool> ret;
@@ -218,13 +148,6 @@ public:
             if (!ret.second)
                 ret.first->second += it->second;
         }
-        return *this;
-    }
-
-    CColorAmount& operator+=(const CAmount& rhs)
-    {
-        if (this->size() == 1)
-            this->begin()->second += rhs;
         return *this;
     }
 
@@ -238,6 +161,13 @@ public:
             if ((*this)[it->first] == 0)
                 this->erase(it->first);
         }
+        return *this;
+    }
+
+    CColorAmount& operator+=(const CAmount& rhs)
+    {
+        if (this->size() == 1)
+            this->begin()->second += rhs;
         return *this;
     }
 
@@ -274,14 +204,18 @@ public:
     CColorAmount& operator++()
     {
         if (this->size() == 1)
-            this->begin()->second += 1;
+            (*this) += 1;
+        else
+            throw std::runtime_error("CColorAmount::operator++(): The size of color amount should be 1.");
         return *this;
     }
 
     CColorAmount& operator--()
     {
         if (this->size() == 1)
-            this->begin()->second -= 1;
+            (*this) -= 1;
+        else
+            throw std::runtime_error("CColorAmount::operator--(): The size of color amount should be 1.");
         return *this;
     }
 
@@ -319,6 +253,13 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const CColorAmount& ca);
 };
+CColorAmount const operator+(const CColorAmount &lhs, const CColorAmount &rhs);
+CColorAmount const operator-(const CColorAmount &lhs, const CColorAmount &rhs);
+CColorAmount const operator+(const CColorAmount &lhs, const CAmount &rhs);
+CColorAmount const operator-(const CColorAmount &lhs, const CAmount &rhs);
+CColorAmount const operator*(const CColorAmount &lhs, const CAmount &rhs);
+CColorAmount const operator/(const CColorAmount &lhs, const CAmount &rhs);
+CColorAmount const operator%(const CColorAmount &lhs, const CAmount &rhs);
 
 /** Type-safe wrapper class to for fee rates
  * (how much to pay based on transaction size)

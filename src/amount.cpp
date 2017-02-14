@@ -24,6 +24,41 @@ std::ostream& operator<<(std::ostream& os, const CColorAmount& ca)
     return os;
 }
 
+CColorAmount const operator+(const CColorAmount &lhs, const CColorAmount &rhs)
+{
+    return CColorAmount(lhs) += rhs;
+}
+
+CColorAmount const operator-(const CColorAmount &lhs, const CColorAmount &rhs)
+{
+    return CColorAmount(lhs) -= rhs;
+}
+
+CColorAmount const operator+(const CColorAmount &lhs, const CAmount &rhs)
+{
+    return CColorAmount(lhs) += rhs;
+}
+
+CColorAmount const operator-(const CColorAmount &lhs, const CAmount &rhs)
+{
+    return CColorAmount(lhs) -= rhs;
+}
+
+CColorAmount const operator*(const CColorAmount &lhs, const CAmount &rhs)
+{
+    return CColorAmount(lhs) *= rhs;
+}
+
+CColorAmount const operator/(const CColorAmount &lhs, const CAmount &rhs)
+{
+    return CColorAmount(lhs) /= rhs;
+}
+
+CColorAmount const operator%(const CColorAmount &lhs, const CAmount &rhs)
+{
+    return CColorAmount(lhs) %= rhs;
+}
+
 CFeeRate::CFeeRate(const CColorAmount& mFeePaid, size_t nSize)
 {
     if (nSize > 0)
