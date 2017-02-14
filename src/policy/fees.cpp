@@ -377,7 +377,7 @@ void CBlockPolicyEstimator::processTransaction(const CTxMemPoolEntry& entry, boo
 
     LogPrint("estimatefee", "Blockpolicy mempool tx %s ", hash.ToString().substr(0,10));
     // Record this as a priority estimate
-    if (entry.GetFee().Value() == 0 || isPriDataPoint(feeRate, curPri)) {
+    if (entry.GetFee().TotalValue() == 0 || isPriDataPoint(feeRate, curPri)) {
         mapMemPoolTxs[hash].stats = &priStats;
         mapMemPoolTxs[hash].bucketIndex =  priStats.NewTx(txHeight, curPri);
     }
