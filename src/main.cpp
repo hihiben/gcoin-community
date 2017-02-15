@@ -2062,7 +2062,7 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
                              REJECT_NONSTANDARD, "bad-txns-too-many-sigops");
 
         CColorAmount mValueOut = tx.GetValueOut();
-        CColorAmount mFees = mValueIn-mValueOut;
+        CColorAmount mFees(1, mValueIn.Value() - mValueOut.Value());
         double dPriority = view.GetPriority(tx, chainActive.Height());
 
         CTxMemPoolEntry entry(tx, mFees, GetTime(), dPriority, chainActive.Height(), mempool.HasNoInputsOf(tx));
