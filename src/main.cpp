@@ -6578,8 +6578,3 @@ bool Fee::CheckFirstCoinBaseTransactions(const CBlock& block) const {
         return false;
     return tx.vout[1].mValue == totalfee;
 }
-
-void Fee::SetOutputForFee(CTxOut &txout, const CScript& scriptPubKeyIn, unsigned int cnt) {
-    txout.scriptPubKey = scriptPubKeyIn;
-    txout.mValue = mValue;
-}

@@ -682,7 +682,6 @@ public:
     inline Fee(const CColorAmount& _mValue) : mValue(_mValue) { }
     bool CheckFee(const CColorAmount& _mValue) const;
     bool CheckFirstCoinBaseTransactions(const CBlock& block) const;
-    void SetOutputForFee(CTxOut &txout, const CScript& scriptPubKeyIn, unsigned int cnt);
     CColorAmount GetFee() const { return mValue; }
 };
 
