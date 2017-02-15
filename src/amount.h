@@ -234,7 +234,7 @@ public:
         return value;
     }
 
-    bool IsPos() const
+    bool IsPositive() const
     {
         for (CColorAmount::const_iterator it(this->begin()); it != this->end(); it++)
             if (it->second < 0)
