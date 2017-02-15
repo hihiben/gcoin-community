@@ -1825,7 +1825,7 @@ bool CheckTxFeeAndColor(const CTransaction tx, const CBlock *pblock, bool fCheck
     }
     BOOST_FOREACH(const CTxOut txout, tx.vout) {
         Input -= txout.mValue;
-        if (!Input.IsPos()) {
+        if (!Input.IsPositive()) {
             LogPrintf("%s : Value of output > value of input\n", __func__);
             return false;
         }
