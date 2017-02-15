@@ -154,10 +154,10 @@ public:
     CColorAmount& operator-=(const CColorAmount& rhs)
     {
         for (CColorAmount::const_iterator it(rhs.begin()); it != rhs.end(); it++) {
-            if (this->count(it->first))
-                (*this)[it->first] -= it->second;
-            else
+            if (!this->count(it->first))
                 (*this)[it->first] = -it->second;
+            else
+                (*this)[it->first] -= it->second;
             if ((*this)[it->first] == 0)
                 this->erase(it->first);
         }
@@ -205,15 +205,6 @@ public:
     {
         if (this->size() == 1)
             (*this) += 1;
-        else
-            throw std::runtime_error("CColorAmount::operator++(): The size of color amount should be 1.");
-        return *this;
-    }
-
-    CColorAmount& operator--()
-    {
-        if (this->size() == 1)
-            (*this) -= 1;
         else
             throw std::runtime_error("CColorAmount::operator--(): The size of color amount should be 1.");
         return *this;
