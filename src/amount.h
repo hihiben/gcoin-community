@@ -55,11 +55,15 @@ public:
     bool operator>(const CColorAmount& rhs) const
     {
         CColorAmount lhs = (*this);
-        for (CColorAmount::const_iterator itr(rhs.begin()); itr != rhs.end(); itr++) {
-            CColorAmount::const_iterator itl = lhs.find(itr->first);
+        CColorAmount::const_iterator itl(lhs.begin());
+        CColorAmount::const_iterator itr(rhs.begin());
+        if (itl == lhs.end())
+            return false;
+        for (; itr != rhs.end(); itr++) {
+            for (; itl != lhs.end() && itl->first != itr->first; itl++);
             if (itl == lhs.end())
                 return false;
-            else if (itl->second <= itr->second)
+            if (itl->second <= itr->second)
                 return false;
         }
 
@@ -69,11 +73,13 @@ public:
     bool operator>=(const CColorAmount& rhs) const
     {
         CColorAmount lhs = (*this);
-        for (CColorAmount::const_iterator itr(rhs.begin()); itr != rhs.end(); itr++) {
-            CColorAmount::const_iterator itl = lhs.find(itr->first);
+        CColorAmount::const_iterator itl(lhs.begin());
+        CColorAmount::const_iterator itr(rhs.begin());
+        for (; itr != rhs.end(); itr++) {
+            for (; itl != lhs.end() && itl->first != itr->first; itl++);
             if (itl == lhs.end())
                 return false;
-            else if (itl->second < itr->second)
+            if (itl->second < itr->second)
                 return false;
         }
 
@@ -83,11 +89,15 @@ public:
     bool operator<(const CColorAmount& rhs) const
     {
         CColorAmount lhs = (*this);
-        for (CColorAmount::const_iterator itl(lhs.begin()); itl != lhs.end(); itl++) {
-            CColorAmount::const_iterator itr = rhs.find(itl->first);
+        CColorAmount::const_iterator itl(lhs.begin());
+        CColorAmount::const_iterator itr(rhs.begin());
+        if (itr == rhs.end())
+            return false;
+        for (; itl != lhs.end(); itl++) {
+            for (; itr != rhs.end() && itl->first != itr->first; itr++);
             if (itr == rhs.end())
                 return false;
-            else if (itl->second >= itr->second)
+            if (itl->second >= itr->second)
                 return false;
         }
 
@@ -97,12 +107,13 @@ public:
     bool operator<=(const CColorAmount& rhs) const
     {
         CColorAmount lhs = (*this);
-
-        for (CColorAmount::const_iterator itl(lhs.begin()); itl != lhs.end(); itl++) {
-            CColorAmount::const_iterator itr = rhs.find(itl->first);
+        CColorAmount::const_iterator itl(lhs.begin());
+        CColorAmount::const_iterator itr(rhs.begin());
+        for (; itl != lhs.end(); itl++) {
+            for (; itr != rhs.end() && itl->first != itr->first; itr++);
             if (itr == rhs.end())
                 return false;
-            else if (itl->second > itr->second)
+            if (itl->second > itr->second)
                 return false;
         }
 
