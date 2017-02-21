@@ -976,22 +976,21 @@ Value sendtoaddress(const Array& params, bool fHelp)
             + HelpRequiringPassphrase() +
             "\nArguments:\n"
             "1. \"address\"             (string, required) The gcoin address to send to.\n"
-            "2. \"amount\"              (numeric, required) The amount in gcoin to send. eg 0.1\n"
-            "3. \"color\"               (numeric, required) The currency type (color) of the coin.\n"
-            "4. \"comment\"             (string, optional) A comment used to store what the transaction is for. \n"
+            "2. \"coloramount\"         (numeric, required) The colored amount in gcoin to send. eg 1:0.1 for 0.1 of color 1\n"
+            "3. \"comment\"             (string, optional) A comment used to store what the transaction is for. \n"
             "                             This is not part of the transaction, just kept in your wallet.\n"
-            "5. \"comment-to\"          (string, optional) A comment to store the name of the person or organization \n"
+            "4. \"comment-to\"          (string, optional) A comment to store the name of the person or organization \n"
             "                             to which you're sending the transaction. This is not part of the \n"
             "                             transaction, just kept in your wallet.\n"
-            "6. subtractfeefromamount   (boolean, optional, default=false) The fee will be deducted from the amount being sent.\n"
+            "5. subtractfeefromamount   (boolean, optional, default=false) The fee will be deducted from the amount being sent.\n"
             "                             The recipient will receive less gcoins than you enter in the amount field.\n"
             "\nResult:\n"
             "\"transactionid\"          (string) The transaction id.\n"
             "\nExamples:\n"
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 1")
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 1 \"donation\" \"seans outpost\"")
-            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 0.1 1 \"\" \"\" true")
-            + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 0.1, 1, \"donation\", \"seans outpost\"")
+            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" {\"1\":0.1}")
+            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" {\"1\":0.1} \"donation\" \"seans outpost\"")
+            + HelpExampleCli("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" {\"1\":0.1} \"\" \"\" true")
+            + HelpExampleRpc("sendtoaddress", "\"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", {\"1\":0.1}, \"donation\", \"seans outpost\"")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
@@ -1001,25 +1000,28 @@ Value sendtoaddress(const Array& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Gcoin address");
 
     // Amount
-    CAmount nAmount = AmountFromValue(params[1]);
-
-    // Color
-    const type_Color color = ColorFromValue(params[2]);
+    Object amount = params[1].get_obj();
+    CColorAmount mAmount;
+    BOOST_FOREACH(const Pair& a, amount) {
+        type_Color color;
+        ParseColor(a.name_.c_str(), color);
+        mAmount += CColorAmount(color, AmountFromValue(a.value_));
+    }
 
     // Wallet comments
     CWalletTx wtx;
-    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
+    if (params.size() > 2 && params[2].type() != null_type && !params[2].get_str().empty())
         wtx.mapValue["comment"] = params[3].get_str();
-    if (params.size() > 4 && params[4].type() != null_type && !params[4].get_str().empty())
-        wtx.mapValue["to"]      = params[4].get_str();
+    if (params.size() > 3 && params[3].type() != null_type && !params[3].get_str().empty())
+        wtx.mapValue["to"]      = params[3].get_str();
 
     bool fSubtractFeeFromAmount = false;
-    if (params.size() > 5)
-        fSubtractFeeFromAmount = params[5].get_bool();
+    if (params.size() > 4)
+        fSubtractFeeFromAmount = params[4].get_bool();
 
     EnsureWalletIsUnlocked();
 
-    SendMoney(address.Get(), CColorAmount(color, nAmount), fSubtractFeeFromAmount, wtx);
+    SendMoney(address.Get(), mAmount, fSubtractFeeFromAmount, wtx);
 
     return wtx.GetHash().GetHex();
 }
@@ -1722,11 +1724,11 @@ Value sendfrom(const Array& params, bool fHelp)
             "\"transactionid\"        (string) The transaction id.\n"
             "\nExamples:\n"
             "\nSend 2 gcoin color 1 from the address to the address, must have at least 1 confirmation\n"
-            + HelpExampleCli("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 2 1") +
+            + HelpExampleCli("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" {\"1\":2}") +
             "\nSend 2 gcoin color 1 from the address to the given address\n"
-            + HelpExampleCli("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" 2 1\"donation\" \"seans outpost\"") +
+            + HelpExampleCli("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\" \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\" {\"1\":2}\"donation\" \"seans outpost\"") +
             "\nAs a json rpc call\n"
-            + HelpExampleRpc("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", 2, 1, \"donation\", \"seans outpost\"")
+            + HelpExampleRpc("sendfrom", "\"3O89Awopq5POaUAXq2q1IjiASC71Zzzzsa\", \"1M72Sfpbz1BPpXFHz9m3CdqATR44Jvaydd\", {\"1\":2}, \"donation\", \"seans outpost\"")
         );
 
     LOCK2(cs_main, pwalletMain->cs_wallet);
